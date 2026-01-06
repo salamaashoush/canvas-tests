@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test 9: Real PDF Loading with PDF.js</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs" type="module"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Dancing+Script&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #21262d;
+      --border-color: #30363d;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --text-muted: #484f58;
+      --accent-blue: #58a6ff;
+      --accent-green: #3fb950;
+      --accent-red: #f85149;
+      --accent-yellow: #d29922;
+      --accent-purple: #a371f7;
+      --pass-bg: rgba(63, 185, 80, 0.15);
+      --pass-border: rgba(63, 185, 80, 0.4);
+      --fail-bg: rgba(248, 81, 73, 0.15);
+      --fail-border: rgba(248, 81, 73, 0.4);
+      --warn-bg: rgba(210, 153, 34, 0.15);
+      --warn-border: rgba(210, 153, 34, 0.4);
+      --transparency-grid: repeating-conic-gradient(#21262d 0% 25%, #161b22 0% 50%) 50% / 16px 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Space Grotesk', -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    .header {
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .test-badge {
+      background: var(--accent-purple);
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text-primary);
+    }
+
+    .hypothesis {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-left: 3px solid var(--accent-yellow);
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin-top: 16px;
+    }
+
+    .hypothesis-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent-yellow);
+      margin-bottom: 4px;
+    }
+
+    .hypothesis p {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .instructions-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--accent-blue);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-top: 16px;
+    }
+
+    .instructions-box h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent-blue);
+      margin-bottom: 12px;
+    }
+
+    .instructions-box pre {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--accent-green);
+      overflow-x: auto;
+      margin-bottom: 12px;
+    }
+
+    .instructions-box ul {
+      margin: 0;
+      padding-left: 20px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .instructions-box li {
+      margin-bottom: 6px;
+    }
+
+    .instructions-box code {
+      background: var(--bg-tertiary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--accent-purple);
+    }
+
+    .summary-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .summary-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .summary-card.pass { border-color: var(--pass-border); background: var(--pass-bg); }
+    .summary-card.fail { border-color: var(--fail-border); background: var(--fail-bg); }
+    .summary-card.warn { border-color: var(--warn-border); background: var(--warn-bg); }
+    .summary-card.info { border-color: var(--accent-blue); background: rgba(88, 166, 255, 0.1); }
+
+    .summary-count {
+      font-size: 28px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1;
+    }
+
+    .summary-card.pass .summary-count { color: var(--accent-green); }
+    .summary-card.fail .summary-count { color: var(--accent-red); }
+    .summary-card.warn .summary-count { color: var(--accent-yellow); }
+    .summary-card.info .summary-count { color: var(--accent-blue); }
+
+    .summary-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+
+    .test-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    .test-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: var(--bg-tertiary);
+    }
+
+    .test-title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .test-number {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--bg-primary);
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+
+    .test-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .test-status {
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 20px;
+    }
+
+    .test-status.pass { background: var(--pass-bg); color: var(--accent-green); border: 1px solid var(--pass-border); }
+    .test-status.fail { background: var(--fail-bg); color: var(--accent-red); border: 1px solid var(--fail-border); }
+    .test-status.warn { background: var(--warn-bg); color: var(--accent-yellow); border: 1px solid var(--warn-border); }
+    .test-status.pending { background: var(--bg-primary); color: var(--text-muted); border: 1px solid var(--border-color); }
+    .test-status.running { background: rgba(88, 166, 255, 0.15); color: var(--accent-blue); border: 1px solid var(--accent-blue); }
+
+    .test-content {
+      padding: 20px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .test-description {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+      align-items: center;
+    }
+
+    button {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+
+    button:hover { background: #282e36; border-color: var(--text-muted); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    button.primary { background: var(--accent-blue); border-color: var(--accent-blue); color: var(--bg-primary); }
+    button.primary:hover { background: #79b8ff; }
+
+    button.danger { background: var(--accent-red); border-color: var(--accent-red); color: #fff; }
+    button.danger:hover { background: #ff6b6b; }
+
+    select, input[type="number"], input[type="text"], input[type="file"] {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+
+    input[type="file"] {
+      padding: 6px 10px;
+    }
+
+    label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+      border-radius: 4px;
+      transition: width 0.3s;
+    }
+
+    .memory-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .memory-stat {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .memory-stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .memory-stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-top: 4px;
+    }
+
+    .memory-stat-value.warn { color: var(--accent-yellow); }
+    .memory-stat-value.danger { color: var(--accent-red); }
+
+    .pdf-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-bottom: 20px;
+      padding: 4px;
+      max-height: 70vh;
+      overflow-y: auto;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+    }
+
+    .pdf-page-wrapper {
+      position: relative;
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .pdf-page-canvas {
+      display: block;
+    }
+
+    .pdf-page-number {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .signature-placeholder {
+      position: absolute;
+      border: 2px dashed var(--accent-blue);
+      background: rgba(88, 166, 255, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: var(--accent-blue);
+      cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+      transition: all 0.2s;
+    }
+
+    .signature-placeholder:hover {
+      background: rgba(88, 166, 255, 0.25);
+    }
+
+    .signature-placeholder.filled {
+      border-color: var(--accent-green);
+      background: rgba(63, 185, 80, 0.1);
+    }
+
+    .signature-placeholder.filled img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .signature-placeholder.error {
+      border-color: var(--accent-red);
+      background: rgba(248, 81, 73, 0.15);
+      color: var(--accent-red);
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .result-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .result-card.pass { border-color: var(--pass-border); }
+    .result-card.fail { border-color: var(--fail-border); }
+    .result-card.warn { border-color: var(--warn-border); }
+
+    .result-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .result-card-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .result-card-status {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    .result-card-status.pass { background: var(--pass-bg); color: var(--accent-green); }
+    .result-card-status.fail { background: var(--fail-bg); color: var(--accent-red); }
+
+    .result-card-body {
+      padding: 12px 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .canvas-preview-small {
+      max-width: 100%;
+      height: 60px;
+      object-fit: contain;
+      background: var(--transparency-grid);
+      border-radius: 4px;
+      margin-top: 8px;
+    }
+
+    .log-panel {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      margin-top: 16px;
+      overflow: hidden;
+    }
+
+    .log-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+      cursor: pointer;
+    }
+
+    .log-header:hover { background: #282e36; }
+
+    .log-toggle {
+      color: var(--text-muted);
+      font-size: 10px;
+      transition: transform 0.2s;
+    }
+
+    .log-toggle.collapsed { transform: rotate(-90deg); }
+
+    .log-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+    }
+
+    .log-content {
+      padding: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      max-height: 300px;
+      overflow-y: auto;
+      line-height: 1.7;
+    }
+
+    .log-content.collapsed { display: none; }
+
+    .browser-info {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 32px;
+    }
+
+    .browser-info h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .browser-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+
+    .browser-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 10px 14px;
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+    }
+
+    .browser-item-label {
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    .browser-item-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-primary);
+    }
+
+    .file-drop-zone {
+      border: 2px dashed var(--border-color);
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      margin-bottom: 20px;
+      transition: all 0.2s;
+    }
+
+    .file-drop-zone.dragover {
+      border-color: var(--accent-blue);
+      background: rgba(88, 166, 255, 0.1);
+    }
+
+    .file-drop-zone p {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+
+    .pdf-info {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .pdf-info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+    }
+
+    .pdf-info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .pdf-info-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .pdf-info-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 1rem;
+      color: var(--accent-blue);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <a href="index.html" class="back-link">Back to Test Index</a>
+      <div class="header-top">
+        <span class="test-badge">Test 09</span>
+        <h1>Real PDF Loading with PDF.js</h1>
+      </div>
+      <div class="hypothesis">
+        <div class="hypothesis-label">Test Purpose</div>
+        <p>Load and render a real PDF file using PDF.js, then generate signatures on top. This mimics the exact customer experience with large documents and tests canvas behavior under memory pressure from real PDF rendering.</p>
+      </div>
+
+      <div class="instructions-box">
+        <h3>How to Test with Limited Resources</h3>
+        <pre># macOS - Firefox with limited memory
+# Create a low-memory Firefox profile and limit JS heap
+/Applications/Firefox.app/Contents/MacOS/firefox -P LowMem
+
+# macOS - Disable GPU acceleration
+MOZ_DISABLE_GPU=1 /Applications/Firefox.app/Contents/MacOS/firefox
+
+# Windows - Firefox with limited memory
+set MOZ_DISABLE_GPU=1
+"C:\Program Files\Mozilla Firefox\firefox.exe"
+
+# Firefox about:config settings (all platforms):
+gfx.canvas.accelerated = false
+layers.acceleration.disabled = true
+javascript.options.mem.max = 524288000
+gfx.webrender.all = false</pre>
+        <ul>
+          <li><strong>macOS:</strong> Create profile via <code>about:profiles</code>, then launch with <code>-P ProfileName</code></li>
+          <li><strong>macOS:</strong> Use Activity Monitor to watch Firefox memory usage</li>
+          <li>Use a large PDF (50+ pages, with images) for best stress testing</li>
+          <li>Watch for blank signatures appearing after many pages render</li>
+        </ul>
+      </div>
+    </header>
+
+    <div class="summary-panel">
+      <div class="summary-card info">
+        <div class="summary-count" id="stat-pages">0</div>
+        <div class="summary-label">PDF Pages</div>
+      </div>
+      <div class="summary-card info">
+        <div class="summary-count" id="stat-rendered">0</div>
+        <div class="summary-label">Rendered</div>
+      </div>
+      <div class="summary-card info">
+        <div class="summary-count" id="stat-placeholders">0</div>
+        <div class="summary-label">Placeholders</div>
+      </div>
+      <div class="summary-card pass">
+        <div class="summary-count" id="stat-signatures">0</div>
+        <div class="summary-label">Signatures</div>
+      </div>
+      <div class="summary-card fail">
+        <div class="summary-count" id="stat-blank">0</div>
+        <div class="summary-label">Blank/Failed</div>
+      </div>
+      <div class="summary-card warn">
+        <div class="summary-count" id="stat-memory">-</div>
+        <div class="summary-label">Memory MB</div>
+      </div>
+    </div>
+
+    <!-- Test 9.1: Load and Render PDF -->
+    <div class="test-section">
+      <div class="test-header">
+        <div class="test-title-group">
+          <span class="test-number">9.1</span>
+          <span class="test-title">Load and Render Real PDF with PDF.js</span>
+        </div>
+        <div class="test-status pending" id="status-9-1">Pending</div>
+      </div>
+      <div class="test-content">
+        <p class="test-description">Load a real PDF file using PDF.js library and render each page to canvas. This uses the same rendering pipeline as the actual application.</p>
+
+        <div class="file-drop-zone" id="drop-zone">
+          <p>Drag and drop a PDF file here, or use the file picker below</p>
+          <p style="font-size: 12px; color: var(--text-muted);">For stress testing, use a large local PDF (50+ pages). Sample PDFs may have CORS issues.</p>
+          <input type="file" id="pdf-file" accept=".pdf" />
+        </div>
+
+        <div class="controls">
+          <label>
+            Or load sample PDF:
+            <select id="sample-pdf">
+              <option value="">-- Select --</option>
+              <option value="https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf">Mozilla TracerMonkey (14 pages)</option>
+              <option value="https://raw.githubusercontent.com/mozilla/pdf.js/master/test/pdfs/TAMReview.pdf">TAM Review (22 pages)</option>
+            </select>
+          </label>
+          <button class="primary" onclick="loadSamplePDF()" id="btn-load-sample">Load Sample</button>
+        </div>
+
+        <div class="controls">
+          <label>
+            Render scale:
+            <select id="render-scale">
+              <option value="1">1x (72 DPI)</option>
+              <option value="1.5">1.5x (108 DPI)</option>
+              <option value="2" selected>2x (144 DPI) - Default</option>
+              <option value="3">3x (216 DPI)</option>
+            </select>
+          </label>
+          <label>
+            Max pages to render:
+            <input type="number" id="max-pages" value="50" min="1" max="500" style="width: 80px;">
+          </label>
+          <label>
+            Placeholders per page:
+            <input type="number" id="placeholders-per-page" value="2" min="0" max="5" style="width: 60px;">
+          </label>
+        </div>
+
+        <div class="progress-bar" id="render-progress-bar" style="display: none;">
+          <div class="progress-fill" id="render-progress" style="width: 0%"></div>
+        </div>
+
+        <div class="pdf-info" id="pdf-info" style="display: none;"></div>
+
+        <div class="memory-stats" id="memory-stats"></div>
+
+        <div class="pdf-container" id="pdf-container"></div>
+
+        <div class="log-panel">
+          <div class="log-header" onclick="toggleLog('pdf')">
+            <span class="log-toggle" id="pdf-log-toggle">&#9660;</span>
+            <span class="log-title">PDF.js Debug Log</span>
+          </div>
+          <div class="log-content collapsed" id="pdf-log"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test 9.2: Generate Signatures -->
+    <div class="test-section">
+      <div class="test-header">
+        <div class="test-title-group">
+          <span class="test-number">9.2</span>
+          <span class="test-title">Generate Signatures Under PDF Load</span>
+        </div>
+        <div class="test-status pending" id="status-9-2">Pending</div>
+      </div>
+      <div class="test-content">
+        <p class="test-description">Generate signatures for all placeholders while PDF pages remain in memory. Tests if memory pressure from PDF rendering causes blank signatures.</p>
+
+        <div class="controls">
+          <label>
+            Signature Type:
+            <select id="sig-type">
+              <option value="text">Text (typed)</option>
+              <option value="draw">Draw (simulated)</option>
+              <option value="mixed">Mixed</option>
+            </select>
+          </label>
+          <label>
+            Delay between signatures:
+            <select id="sig-delay">
+              <option value="0">No delay</option>
+              <option value="10">10ms</option>
+              <option value="50" selected>50ms</option>
+              <option value="100">100ms</option>
+            </select>
+          </label>
+          <button class="primary" onclick="generateAllSignatures()" id="btn-sign">Sign All Placeholders</button>
+          <button onclick="clearSignatures()">Clear Signatures</button>
+        </div>
+
+        <div class="progress-bar" id="sign-progress-bar" style="display: none;">
+          <div class="progress-fill" id="sign-progress" style="width: 0%"></div>
+        </div>
+
+        <div class="results-grid" id="signature-results"></div>
+
+        <div class="log-panel">
+          <div class="log-header" onclick="toggleLog('sign')">
+            <span class="log-toggle" id="sign-log-toggle">&#9660;</span>
+            <span class="log-title">Signature Debug Log</span>
+          </div>
+          <div class="log-content collapsed" id="sign-log"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test 9.3: Stress Test -->
+    <div class="test-section">
+      <div class="test-header">
+        <div class="test-title-group">
+          <span class="test-number">9.3</span>
+          <span class="test-title">Scroll and Sign Stress Test</span>
+        </div>
+        <div class="test-status pending" id="status-9-3">Pending</div>
+      </div>
+      <div class="test-content">
+        <p class="test-description">Simulates user scrolling through the document while signing. Creates and destroys signatures rapidly to test for memory issues.</p>
+
+        <div class="controls">
+          <label>
+            Iterations:
+            <input type="number" id="stress-iterations" value="50" min="10" max="500" style="width: 80px;">
+          </label>
+          <button class="danger" onclick="runStressTest()" id="btn-stress">Run Stress Test</button>
+        </div>
+
+        <div class="progress-bar" id="stress-progress-bar" style="display: none;">
+          <div class="progress-fill" id="stress-progress" style="width: 0%"></div>
+        </div>
+
+        <div class="results-grid" id="stress-results"></div>
+
+        <div class="log-panel">
+          <div class="log-header" onclick="toggleLog('stress')">
+            <span class="log-toggle" id="stress-log-toggle">&#9660;</span>
+            <span class="log-title">Stress Test Log</span>
+          </div>
+          <div class="log-content collapsed" id="stress-log"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="browser-info" id="browser-info"></div>
+  </div>
+
+  <script type="module">
+    // =============================================================================
+    // PDF.js Setup
+    // =============================================================================
+    const pdfjsLib = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs';
+
+    // =============================================================================
+    // Global State
+    // =============================================================================
+    let pdfDoc = null;
+    const renderedPages = [];
+    const placeholders = [];
+    const signatures = [];
+    let blankCount = 0;
+    let totalPages = 0;
+    let renderedCount = 0;
+
+    const DEFAULT_CANVAS_WIDTH = 512;
+    const DEFAULT_CANVAS_HEIGHT = 200;
+    const MIN_DPR = 2;
+
+    // Make functions available globally
+    window.loadSamplePDF = loadSamplePDF;
+    window.generateAllSignatures = generateAllSignatures;
+    window.clearSignatures = clearSignatures;
+    window.runStressTest = runStressTest;
+    window.toggleLog = toggleLog;
+
+    // =============================================================================
+    // Utilities
+    // =============================================================================
+    function log(prefix, message) {
+      const el = document.getElementById(prefix + '-log');
+      const timestamp = new Date().toISOString().substr(11, 12);
+      el.textContent += `[${timestamp}] ${message}\n`;
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function setStatus(testId, status, message) {
+      const el = document.getElementById(`status-${testId}`);
+      el.className = `test-status ${status}`;
+      el.textContent = message;
+    }
+
+    function toggleLog(prefix) {
+      const content = document.getElementById(prefix + '-log');
+      const toggle = document.getElementById(prefix + '-log-toggle');
+      content.classList.toggle('collapsed');
+      toggle.classList.toggle('collapsed');
+    }
+
+    function updateStats() {
+      document.getElementById('stat-pages').textContent = totalPages;
+      document.getElementById('stat-rendered').textContent = renderedCount;
+      document.getElementById('stat-placeholders').textContent = placeholders.length;
+      document.getElementById('stat-signatures').textContent = signatures.filter(s => s && !s.isBlank).length;
+      document.getElementById('stat-blank').textContent = blankCount;
+    }
+
+    function getMemoryUsage() {
+      if (performance.memory) {
+        return {
+          usedJSHeapSize: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024),
+          totalJSHeapSize: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024),
+          jsHeapSizeLimit: Math.round(performance.memory.jsHeapSizeLimit / 1024 / 1024)
+        };
+      }
+      return null;
+    }
+
+    function updateMemoryStats(containerId) {
+      const container = document.getElementById(containerId);
+      const mem = getMemoryUsage();
+      const canvasCount = document.querySelectorAll('canvas').length;
+
+      if (mem) {
+        const usedPercent = (mem.usedJSHeapSize / mem.jsHeapSizeLimit * 100).toFixed(1);
+        const usedClass = usedPercent > 80 ? 'danger' : usedPercent > 50 ? 'warn' : '';
+
+        container.innerHTML = `
+          <div class="memory-stat">
+            <div class="memory-stat-label">Used Heap</div>
+            <div class="memory-stat-value ${usedClass}">${mem.usedJSHeapSize} MB (${usedPercent}%)</div>
+          </div>
+          <div class="memory-stat">
+            <div class="memory-stat-label">Total Heap</div>
+            <div class="memory-stat-value">${mem.totalJSHeapSize} MB</div>
+          </div>
+          <div class="memory-stat">
+            <div class="memory-stat-label">Heap Limit</div>
+            <div class="memory-stat-value">${mem.jsHeapSizeLimit} MB</div>
+          </div>
+          <div class="memory-stat">
+            <div class="memory-stat-label">Canvas Elements</div>
+            <div class="memory-stat-value">${canvasCount}</div>
+          </div>
+        `;
+        document.getElementById('stat-memory').textContent = mem.usedJSHeapSize;
+      } else {
+        container.innerHTML = `
+          <div class="memory-stat">
+            <div class="memory-stat-label">Memory API</div>
+            <div class="memory-stat-value warn">Not available (Firefox)</div>
+          </div>
+          <div class="memory-stat">
+            <div class="memory-stat-label">Canvas Elements</div>
+            <div class="memory-stat-value">${canvasCount}</div>
+          </div>
+        `;
+        document.getElementById('stat-memory').textContent = 'N/A';
+      }
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // =============================================================================
+    // Browser Info
+    // =============================================================================
+    function renderBrowserInfo() {
+      const ua = navigator.userAgent;
+      const isFirefox = /Firefox\/(\d+)/.test(ua);
+      const firefoxVersion = ua.match(/Firefox\/(\d+)/)?.[1] || '-';
+      const mem = getMemoryUsage();
+
+      const items = [
+        { label: 'Browser', value: isFirefox ? `Firefox ${firefoxVersion}` : (ua.includes('Chrome') ? 'Chrome' : 'Other') },
+        { label: 'Platform', value: navigator.platform },
+        { label: 'Device Pixel Ratio', value: window.devicePixelRatio.toFixed(2) },
+        { label: 'Hardware Concurrency', value: navigator.hardwareConcurrency || 'Unknown' },
+        { label: 'Memory API', value: mem ? 'Available' : 'Not Available' },
+        { label: 'PDF.js Version', value: pdfjsLib.version || '4.0.379' }
+      ];
+
+      document.getElementById('browser-info').innerHTML = `
+        <h3>Browser Information</h3>
+        <div class="browser-grid">
+          ${items.map(item => `
+            <div class="browser-item">
+              <span class="browser-item-label">${item.label}</span>
+              <span class="browser-item-value">${item.value}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    // =============================================================================
+    // File Handling
+    // =============================================================================
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('pdf-file');
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type === 'application/pdf') {
+        await loadPDFFromFile(file);
+      }
+    });
+
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        await loadPDFFromFile(file);
+      }
+    });
+
+    async function loadPDFFromFile(file) {
+      const arrayBuffer = await file.arrayBuffer();
+      await loadPDF(arrayBuffer, file.name, file.size);
+    }
+
+    async function loadSamplePDF() {
+      const url = document.getElementById('sample-pdf').value;
+      if (!url) return;
+
+      setStatus('9-1', 'running', 'Fetching...');
+      log('pdf', `Fetching PDF from: ${url}`);
+
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const arrayBuffer = await response.arrayBuffer();
+        const filename = url.split('/').pop();
+        await loadPDF(arrayBuffer, filename, arrayBuffer.byteLength);
+      } catch (err) {
+        log('pdf', `ERROR: Failed to fetch PDF: ${err.message}`);
+        setStatus('9-1', 'fail', 'Fetch failed');
+      }
+    }
+
+    // =============================================================================
+    // PDF Loading and Rendering
+    // =============================================================================
+    async function loadPDF(source, filename, filesize) {
+      document.getElementById('pdf-log').textContent = '';
+      document.getElementById('pdf-container').innerHTML = '';
+      document.getElementById('render-progress-bar').style.display = 'block';
+      renderedPages.length = 0;
+      placeholders.length = 0;
+      signatures.length = 0;
+      blankCount = 0;
+      renderedCount = 0;
+
+      setStatus('9-1', 'running', 'Loading...');
+      log('pdf', `Loading PDF: ${filename} (${(filesize / 1024 / 1024).toFixed(2)} MB)`);
+
+      const startTime = performance.now();
+
+      try {
+        const loadingTask = pdfjsLib.getDocument({ data: source });
+        pdfDoc = await loadingTask.promise;
+
+        totalPages = pdfDoc.numPages;
+        log('pdf', `PDF loaded successfully. Total pages: ${totalPages}`);
+
+        // Show PDF info
+        const metadata = await pdfDoc.getMetadata().catch(() => ({}));
+        const info = metadata.info || {};
+        document.getElementById('pdf-info').style.display = 'block';
+        document.getElementById('pdf-info').innerHTML = `
+          <div class="pdf-info-grid">
+            <div class="pdf-info-item">
+              <span class="pdf-info-label">Filename</span>
+              <span class="pdf-info-value">${filename}</span>
+            </div>
+            <div class="pdf-info-item">
+              <span class="pdf-info-label">File Size</span>
+              <span class="pdf-info-value">${(filesize / 1024 / 1024).toFixed(2)} MB</span>
+            </div>
+            <div class="pdf-info-item">
+              <span class="pdf-info-label">Pages</span>
+              <span class="pdf-info-value">${totalPages}</span>
+            </div>
+            <div class="pdf-info-item">
+              <span class="pdf-info-label">Title</span>
+              <span class="pdf-info-value">${info.Title || 'N/A'}</span>
+            </div>
+            <div class="pdf-info-item">
+              <span class="pdf-info-label">Author</span>
+              <span class="pdf-info-value">${info.Author || 'N/A'}</span>
+            </div>
+            <div class="pdf-info-item">
+              <span class="pdf-info-label">PDF Version</span>
+              <span class="pdf-info-value">${metadata.contentDispositionFilename ? 'Unknown' : 'PDF ' + (info.PDFFormatVersion || '?')}</span>
+            </div>
+          </div>
+        `;
+
+        // Render pages
+        await renderPDFPages();
+
+        const elapsed = performance.now() - startTime;
+        log('pdf', `\nTotal render time: ${elapsed.toFixed(0)}ms`);
+        log('pdf', `Average per page: ${(elapsed / renderedCount).toFixed(0)}ms`);
+        log('pdf', `Total placeholders: ${placeholders.length}`);
+
+        updateStats();
+        setStatus('9-1', 'pass', `${renderedCount} pages rendered`);
+
+      } catch (err) {
+        log('pdf', `ERROR: ${err.message}`);
+        console.error(err);
+        setStatus('9-1', 'fail', 'Load failed');
+      }
+
+      document.getElementById('render-progress-bar').style.display = 'none';
+    }
+
+    async function renderPDFPages() {
+      const container = document.getElementById('pdf-container');
+      const scale = parseFloat(document.getElementById('render-scale').value);
+      const maxPages = parseInt(document.getElementById('max-pages').value);
+      const placeholdersPerPage = parseInt(document.getElementById('placeholders-per-page').value);
+
+      const pagesToRender = Math.min(totalPages, maxPages);
+      log('pdf', `Rendering ${pagesToRender} pages at ${scale}x scale...`);
+
+      for (let pageNum = 1; pageNum <= pagesToRender; pageNum++) {
+        const progress = (pageNum / pagesToRender * 100).toFixed(0);
+        document.getElementById('render-progress').style.width = progress + '%';
+
+        try {
+          const page = await pdfDoc.getPage(pageNum);
+          const viewport = page.getViewport({ scale });
+
+          // Create wrapper
+          const wrapper = document.createElement('div');
+          wrapper.className = 'pdf-page-wrapper';
+
+          // Create canvas following PDF.js official example
+          const canvas = document.createElement('canvas');
+          canvas.className = 'pdf-page-canvas';
+          const ctx = canvas.getContext('2d');
+
+          // HiDPI support - from PDF.js official docs
+          const outputScale = window.devicePixelRatio || 1;
+
+          // Set canvas dimensions
+          canvas.width = Math.floor(viewport.width * outputScale);
+          canvas.height = Math.floor(viewport.height * outputScale);
+          canvas.style.width = Math.floor(viewport.width) + 'px';
+          canvas.style.height = Math.floor(viewport.height) + 'px';
+
+          // Transform for HiDPI
+          const transform = outputScale !== 1
+            ? [outputScale, 0, 0, outputScale, 0, 0]
+            : null;
+
+          // Render PDF page to canvas
+          const renderContext = {
+            canvasContext: ctx,
+            transform: transform,
+            viewport: viewport
+          };
+
+          await page.render(renderContext).promise;
+
+          wrapper.appendChild(canvas);
+
+          // Page number badge
+          const pageNumEl = document.createElement('div');
+          pageNumEl.className = 'pdf-page-number';
+          pageNumEl.textContent = `Page ${pageNum} / ${totalPages}`;
+          wrapper.appendChild(pageNumEl);
+
+          // Add signature placeholders
+          for (let j = 0; j < placeholdersPerPage; j++) {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'signature-placeholder';
+
+            // Position placeholders at different locations
+            const xPos = 10 + (j % 2) * 50;
+            const yPos = 60 + Math.floor(j / 2) * 20 + (pageNum % 3) * 5;
+
+            placeholder.style.left = xPos + '%';
+            placeholder.style.top = yPos + '%';
+            placeholder.style.width = '35%';
+            placeholder.style.height = '12%';
+            placeholder.textContent = `Sign ${pageNum}.${j + 1}`;
+            placeholder.dataset.pageIndex = pageNum - 1;
+            placeholder.dataset.placeholderIndex = j;
+
+            placeholders.push({
+              element: placeholder,
+              pageIndex: pageNum - 1,
+              placeholderIndex: j,
+              filled: false
+            });
+
+            wrapper.appendChild(placeholder);
+          }
+
+          container.appendChild(wrapper);
+          renderedPages.push({ canvas, wrapper, pageNum });
+          renderedCount++;
+
+          // Log progress every 10 pages
+          if (pageNum % 10 === 0) {
+            log('pdf', `Rendered page ${pageNum}/${pagesToRender}`);
+            updateMemoryStats('memory-stats');
+            await sleep(0); // Yield to UI
+          }
+
+        } catch (err) {
+          log('pdf', `ERROR rendering page ${pageNum}: ${err.message}`);
+        }
+
+        updateStats();
+      }
+    }
+
+    // =============================================================================
+    // Signature Generation (mimics actual app code)
+    // =============================================================================
+    async function generateAllSignatures() {
+      if (placeholders.length === 0) {
+        log('sign', 'No placeholders available. Load a PDF first.');
+        return;
+      }
+
+      const sigType = document.getElementById('sig-type').value;
+      const delay = parseInt(document.getElementById('sig-delay').value);
+
+      document.getElementById('sign-log').textContent = '';
+      document.getElementById('signature-results').innerHTML = '';
+      document.getElementById('sign-progress-bar').style.display = 'block';
+      document.getElementById('btn-sign').disabled = true;
+      setStatus('9-2', 'running', 'Signing...');
+      signatures.length = 0;
+      blankCount = 0;
+
+      log('sign', `Generating ${placeholders.length} signatures (type: ${sigType}, delay: ${delay}ms)`);
+      log('sign', `Memory before signing:`);
+      const memBefore = getMemoryUsage();
+      if (memBefore) log('sign', `  Used heap: ${memBefore.usedJSHeapSize} MB`);
+
+      const startTime = performance.now();
+      const results = document.getElementById('signature-results');
+
+      for (let i = 0; i < placeholders.length; i++) {
+        const progress = ((i + 1) / placeholders.length * 100).toFixed(0);
+        document.getElementById('sign-progress').style.width = progress + '%';
+
+        const placeholder = placeholders[i];
+        const useText = sigType === 'text' || (sigType === 'mixed' && i % 2 === 0);
+
+        let sig;
+        try {
+          if (useText) {
+            sig = generateTextSignature(`Signer ${i + 1}`);
+          } else {
+            sig = generateDrawSignature();
+          }
+        } catch (err) {
+          log('sign', `ERROR generating signature ${i + 1}: ${err.message}`);
+          sig = { dataUri: '', width: 0, height: 0, error: err.message };
+        }
+
+        // Validate the signature
+        const validation = validateSignature(sig.dataUri);
+        const isBlank = !validation.valid;
+
+        if (isBlank) {
+          blankCount++;
+          placeholder.element.classList.add('error');
+          placeholder.element.classList.remove('filled');
+          placeholder.element.innerHTML = 'BLANK!';
+          log('sign', `WARNING: Signature ${i + 1} is BLANK! Reason: ${validation.reason}`);
+        } else {
+          placeholder.element.classList.add('filled');
+          placeholder.element.classList.remove('error');
+          placeholder.element.innerHTML = `<img src="${sig.dataUri}" alt="Signature">`;
+        }
+
+        signatures.push({
+          index: i,
+          type: useText ? 'text' : 'draw',
+          dataUri: sig.dataUri,
+          isBlank: isBlank,
+          reason: validation.reason
+        });
+
+        // Add result card for first few and any blanks
+        if (i < 3 || isBlank) {
+          const card = document.createElement('div');
+          card.className = `result-card ${isBlank ? 'fail' : 'pass'}`;
+          card.innerHTML = `
+            <div class="result-card-header">
+              <span class="result-card-title">Sig ${i + 1} (${useText ? 'Text' : 'Draw'})</span>
+              <span class="result-card-status ${isBlank ? 'fail' : 'pass'}">${isBlank ? 'BLANK' : 'OK'}</span>
+            </div>
+            <div class="result-card-body">
+              Data URI: ${sig.dataUri.length.toLocaleString()} chars<br>
+              ${isBlank ? `Reason: ${validation.reason}` : `Dimensions: ${sig.width}x${sig.height}`}
+              ${sig.dataUri ? `<img class="canvas-preview-small" src="${sig.dataUri}" alt="Preview">` : ''}
+            </div>
+          `;
+          results.appendChild(card);
+        }
+
+        if (delay > 0) {
+          await sleep(delay);
+        } else if (i % 10 === 0) {
+          await sleep(0);
+        }
+
+        updateStats();
+      }
+
+      const elapsed = performance.now() - startTime;
+      log('sign', `\nCompleted in ${elapsed.toFixed(0)}ms`);
+      log('sign', `Total signatures: ${signatures.length}`);
+      log('sign', `Blank signatures: ${blankCount}`);
+
+      const memAfter = getMemoryUsage();
+      if (memAfter) {
+        log('sign', `Memory after signing: ${memAfter.usedJSHeapSize} MB`);
+        if (memBefore) {
+          log('sign', `Memory delta: +${memAfter.usedJSHeapSize - memBefore.usedJSHeapSize} MB`);
+        }
+      }
+
+      document.getElementById('sign-progress-bar').style.display = 'none';
+      document.getElementById('btn-sign').disabled = false;
+
+      if (blankCount > 0) {
+        setStatus('9-2', 'fail', `${blankCount} blank!`);
+      } else {
+        setStatus('9-2', 'pass', `All ${signatures.length} OK`);
+      }
+
+      updateMemoryStats('memory-stats');
+    }
+
+    // Mimics text signature logic
+    function generateTextSignature(text) {
+      const canvas = document.createElement('canvas');
+      const dpr = Math.max(MIN_DPR, window.devicePixelRatio);
+      canvas.width = DEFAULT_CANVAS_WIDTH * dpr;
+      canvas.height = DEFAULT_CANVAS_HEIGHT * dpr;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        return { dataUri: '', width: 0, height: 0, error: 'Context null' };
+      }
+
+      ctx.fillStyle = '#000000';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      // Font sizing loop (mimics actual code)
+      let fontSize = 100 * dpr;
+      const textMargin = canvas.width * 0.1;
+      const MIN_FONT_SIZE = 4;
+
+      while (fontSize > MIN_FONT_SIZE) {
+        ctx.font = `${fontSize}px "Dancing Script", cursive`;
+        const metrics = ctx.measureText(text);
+        const textWidth = metrics.width;
+
+        if (textWidth <= canvas.width - textMargin) break;
+        fontSize = Math.min(fontSize - 1, Math.floor(fontSize * (canvas.width - textMargin) / textWidth));
+      }
+
+      if (fontSize <= MIN_FONT_SIZE) {
+        return { dataUri: '', width: canvas.width, height: canvas.height, error: 'Font too small' };
+      }
+
+      ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+      return {
+        dataUri: canvas.toDataURL('image/png'),
+        width: canvas.width,
+        height: canvas.height
+      };
+    }
+
+    // Mimics draw signature logic
+    function generateDrawSignature() {
+      const canvas = document.createElement('canvas');
+      const dpr = Math.max(MIN_DPR, window.devicePixelRatio);
+      canvas.width = DEFAULT_CANVAS_WIDTH * dpr;
+      canvas.height = DEFAULT_CANVAS_HEIGHT * dpr;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        return { dataUri: '', width: 0, height: 0, error: 'Context null' };
+      }
+
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2 * dpr;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      // Generate signature-like path
+      ctx.beginPath();
+      const startX = canvas.width * 0.1;
+      const startY = canvas.height * 0.5;
+      ctx.moveTo(startX, startY);
+
+      let x = startX;
+      let y = startY;
+      let pathLength = 0;
+
+      for (let i = 0; i < 25; i++) {
+        const dx = (Math.random() * 0.06 + 0.02) * canvas.width;
+        const dy = (Math.random() - 0.5) * 0.25 * canvas.height;
+        const newX = x + dx;
+        const newY = Math.max(canvas.height * 0.2, Math.min(canvas.height * 0.8, y + dy));
+
+        // Use quadratic curves for smoothness
+        const cpX = x + dx * 0.5;
+        const cpY = y + (newY - y) * 0.5 + (Math.random() - 0.5) * 20;
+        ctx.quadraticCurveTo(cpX, cpY, newX, newY);
+
+        pathLength += Math.sqrt(dx * dx + dy * dy);
+        x = newX;
+        y = newY;
+      }
+
+      ctx.stroke();
+
+      return {
+        dataUri: canvas.toDataURL('image/png'),
+        width: canvas.width,
+        height: canvas.height,
+        pathLength
+      };
+    }
+
+    // Mimics signature validator logic
+    function validateSignature(dataUri) {
+      if (!dataUri) {
+        return { valid: false, reason: 'Empty data URI' };
+      }
+
+      if (dataUri.length < 500) {
+        return { valid: false, reason: 'Data URI too short' };
+      }
+
+      if (!dataUri.startsWith('data:image/png;base64,')) {
+        return { valid: false, reason: 'Invalid format' };
+      }
+
+      // Check for minimal base64 content
+      const base64 = dataUri.split(',')[1];
+      if (!base64 || base64.length < 100) {
+        return { valid: false, reason: 'Base64 too short' };
+      }
+
+      return { valid: true, reason: 'OK' };
+    }
+
+    function clearSignatures() {
+      signatures.length = 0;
+      blankCount = 0;
+
+      placeholders.forEach(p => {
+        p.element.classList.remove('filled', 'error');
+        p.element.innerHTML = `Sign ${p.pageIndex + 1}.${p.placeholderIndex + 1}`;
+        p.filled = false;
+      });
+
+      document.getElementById('signature-results').innerHTML = '';
+      updateStats();
+      setStatus('9-2', 'pending', 'Pending');
+    }
+
+    // =============================================================================
+    // Stress Test
+    // =============================================================================
+    async function runStressTest() {
+      const iterations = parseInt(document.getElementById('stress-iterations').value);
+
+      document.getElementById('stress-log').textContent = '';
+      document.getElementById('stress-results').innerHTML = '';
+      document.getElementById('stress-progress-bar').style.display = 'block';
+      setStatus('9-3', 'running', 'Testing...');
+
+      log('stress', `Running ${iterations} stress iterations...`);
+      log('stress', `PDF pages in memory: ${renderedPages.length}`);
+
+      const memBefore = getMemoryUsage();
+      if (memBefore) log('stress', `Starting heap: ${memBefore.usedJSHeapSize} MB`);
+
+      const startTime = performance.now();
+      let failures = 0;
+      const results = document.getElementById('stress-results');
+
+      for (let i = 0; i < iterations; i++) {
+        const progress = ((i + 1) / iterations * 100).toFixed(0);
+        document.getElementById('stress-progress').style.width = progress + '%';
+
+        // Create signature
+        const sig = i % 2 === 0 ? generateTextSignature(`Stress ${i}`) : generateDrawSignature();
+        const validation = validateSignature(sig.dataUri);
+
+        if (!validation.valid) {
+          failures++;
+          log('stress', `Iteration ${i + 1}: FAILED - ${validation.reason}`);
+
+          const card = document.createElement('div');
+          card.className = 'result-card fail';
+          card.innerHTML = `
+            <div class="result-card-header">
+              <span class="result-card-title">Iteration ${i + 1}</span>
+              <span class="result-card-status fail">FAIL</span>
+            </div>
+            <div class="result-card-body">
+              Reason: ${validation.reason}<br>
+              Data URI length: ${sig.dataUri.length}
+            </div>
+          `;
+          results.appendChild(card);
+        }
+
+        // Scroll simulation - access random PDF page canvas
+        if (renderedPages.length > 0 && i % 5 === 0) {
+          const randomPage = renderedPages[Math.floor(Math.random() * renderedPages.length)];
+          try {
+            // This forces the browser to potentially re-render or access GPU memory
+            const ctx = randomPage.canvas.getContext('2d');
+            const pixel = ctx.getImageData(0, 0, 1, 1);
+          } catch (err) {
+            log('stress', `Page access error: ${err.message}`);
+          }
+        }
+
+        if ((i + 1) % 25 === 0) {
+          log('stress', `Completed ${i + 1}/${iterations}`);
+          await sleep(0);
+        }
+      }
+
+      const elapsed = performance.now() - startTime;
+      log('stress', `\nCompleted in ${elapsed.toFixed(0)}ms`);
+      log('stress', `Failures: ${failures} / ${iterations}`);
+
+      const memAfter = getMemoryUsage();
+      if (memAfter && memBefore) {
+        log('stress', `Memory delta: ${memAfter.usedJSHeapSize - memBefore.usedJSHeapSize} MB`);
+      }
+
+      // Summary card
+      const summaryCard = document.createElement('div');
+      summaryCard.className = `result-card ${failures > 0 ? 'fail' : 'pass'}`;
+      summaryCard.innerHTML = `
+        <div class="result-card-header">
+          <span class="result-card-title">Stress Test Summary</span>
+          <span class="result-card-status ${failures > 0 ? 'fail' : 'pass'}">${failures > 0 ? 'FAILED' : 'PASS'}</span>
+        </div>
+        <div class="result-card-body">
+          Iterations: ${iterations}<br>
+          Failures: ${failures}<br>
+          Time: ${elapsed.toFixed(0)}ms<br>
+          Rate: ${(iterations / elapsed * 1000).toFixed(1)} sig/s
+        </div>
+      `;
+      results.insertBefore(summaryCard, results.firstChild);
+
+      document.getElementById('stress-progress-bar').style.display = 'none';
+
+      if (failures > 0) {
+        setStatus('9-3', 'fail', `${failures} failures`);
+      } else {
+        setStatus('9-3', 'pass', `${iterations} OK`);
+      }
+    }
+
+    // =============================================================================
+    // Initialize
+    // =============================================================================
+    renderBrowserInfo();
+    updateMemoryStats('memory-stats');
+    updateStats();
+
+    // Periodic memory updates
+    setInterval(() => {
+      updateMemoryStats('memory-stats');
+    }, 3000);
+
+    log('pdf', 'PDF.js initialized. Ready to load PDF files.');
+    log('pdf', `PDF.js version: ${pdfjsLib.version}`);
+  </script>
+</body>
+</html>

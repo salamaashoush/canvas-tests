@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canvas Signature Bug Tests | Debug Suite</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-tertiary: #1a1a24;
+      --bg-card: #16161f;
+      --border-color: #2a2a3a;
+      --border-accent: #3a3a4a;
+      --text-primary: #e4e4e7;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent-cyan: #22d3ee;
+      --accent-purple: #a78bfa;
+      --accent-green: #4ade80;
+      --accent-red: #f87171;
+      --accent-amber: #fbbf24;
+      --accent-blue: #60a5fa;
+    }
+
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    header {
+      text-align: center;
+      padding: 3rem 0;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 2rem;
+      position: relative;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 300px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent-cyan), var(--accent-purple), transparent);
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      margin: 0 0 0.5rem 0;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      font-weight: 400;
+    }
+
+    h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 2rem 0 1rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    h2::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 1.1rem;
+      background: linear-gradient(180deg, var(--accent-cyan), var(--accent-purple));
+      border-radius: 2px;
+    }
+
+    .info-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .browser-panel {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .browser-stats {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .browser-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .browser-stat-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .browser-stat-value {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--accent-cyan);
+    }
+
+    .match-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background: rgba(74, 222, 128, 0.1);
+      border: 1px solid rgba(74, 222, 128, 0.3);
+      color: var(--accent-green);
+    }
+
+    .target-panel {
+      border-left: 3px solid var(--accent-red);
+    }
+
+    .target-panel h3 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--accent-red);
+      margin: 0 0 0.75rem 0;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .target-panel p {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin: 0 0 0.75rem 0;
+    }
+
+    .target-panel ul {
+      margin: 0;
+      padding-left: 1.25rem;
+    }
+
+    .target-panel li {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+    }
+
+    .target-panel strong {
+      color: var(--text-primary);
+    }
+
+    .instructions-panel {
+      border-left: 3px solid var(--accent-amber);
+    }
+
+    .instructions-panel h3 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--accent-amber);
+      margin: 0 0 0.75rem 0;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .instructions-panel ol {
+      margin: 0;
+      padding-left: 1.25rem;
+    }
+
+    .instructions-panel li {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+    }
+
+    .instructions-panel strong {
+      color: var(--text-primary);
+    }
+
+    .tip {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .tip strong {
+      color: var(--accent-amber);
+    }
+
+    code {
+      background: var(--bg-tertiary);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8em;
+      color: var(--accent-purple);
+    }
+
+    .test-grid {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .test-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: all 0.2s ease;
+    }
+
+    .test-card:hover {
+      border-color: var(--accent-cyan);
+      transform: translateY(-2px);
+    }
+
+    .test-card a {
+      display: block;
+      padding: 1.25rem 1.5rem;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .test-card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .test-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      color: var(--bg-primary);
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    .test-title {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .test-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin: 0;
+      padding-left: calc(32px + 0.75rem);
+    }
+
+    .hypothesis-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.8rem;
+    }
+
+    .hypothesis-table th {
+      padding: 0.75rem 1rem;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      font-weight: 500;
+      text-align: left;
+    }
+
+    .hypothesis-table td {
+      padding: 0.75rem 1rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+    }
+
+    .hypothesis-table tr:hover td {
+      background: var(--bg-tertiary);
+    }
+
+    .command-panel {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .command-header {
+      padding: 0.75rem 1rem;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .command-content {
+      padding: 1rem 1.25rem;
+      font-size: 0.8rem;
+      color: var(--accent-green);
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    .command-content .comment {
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 768px) {
+      .container { padding: 1rem; }
+      .browser-panel { flex-direction: column; align-items: flex-start; }
+      .test-desc { padding-left: 0; margin-top: 0.5rem; }
+      .hypothesis-table { font-size: 0.7rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Canvas Signature Bug Investigation</h1>
+      <p class="subtitle">Debug Test Suite for Blank Signature Issues</p>
+    </header>
+
+    <div class="info-panel browser-panel" id="browser-info">
+      <div class="browser-stats">
+        <div class="browser-stat">
+          <span class="browser-stat-label">Browser</span>
+          <span class="browser-stat-value" id="browser-name">Detecting...</span>
+        </div>
+        <div class="browser-stat">
+          <span class="browser-stat-label">Platform</span>
+          <span class="browser-stat-value" id="platform">Detecting...</span>
+        </div>
+        <div class="browser-stat">
+          <span class="browser-stat-label">Device Pixel Ratio</span>
+          <span class="browser-stat-value" id="dpr">Detecting...</span>
+        </div>
+      </div>
+      <div id="match-indicator"></div>
+    </div>
+
+    <div class="info-panel target-panel">
+      <h3>Target Bug Configuration</h3>
+      <p>The reported bug occurs on:</p>
+      <ul>
+        <li><strong>OS:</strong> Windows</li>
+        <li><strong>Browser:</strong> Firefox 145, 146</li>
+        <li><strong>Issue:</strong> Blank/empty signatures being submitted</li>
+        <li><strong>Symptoms:</strong>
+          <ul>
+            <li>Image dimensions preserved but data URI varies in length</li>
+            <li>For text placeholders: height can be 1px or 5px (incorrect)</li>
+            <li>Canvas appears to be blanked or filled with transparent pixels</li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+
+    <div class="info-panel instructions-panel">
+      <h3>How to Use These Tests</h3>
+      <ol>
+        <li>Run each test in <strong>Firefox on Windows</strong> to attempt reproduction</li>
+        <li>Compare results with Chrome/Safari on macOS to see differences</li>
+        <li>Look for <strong style="color: var(--accent-red);">FAIL</strong> or <strong style="color: var(--accent-amber);">WARNING</strong> results</li>
+        <li>Check the browser console for additional errors</li>
+        <li>Document any differences between browsers</li>
+      </ol>
+      <div class="tip">
+        <strong>Tip:</strong> Try enabling Firefox's fingerprint resistance (<code>privacy.resistFingerprinting</code>) to test if privacy settings affect canvas behavior.
+      </div>
+    </div>
+
+    <h2>Test Files</h2>
+
+    <div class="test-grid">
+      <div class="test-card">
+        <a href="01-font-metrics-zero.html">
+          <div class="test-card-header">
+            <span class="test-number">1</span>
+            <span class="test-title">Font Metrics actualBoundingBox Can Be Zero</span>
+          </div>
+          <p class="test-desc">Tests if <code>actualBoundingBoxRight/Left/Ascent/Descent</code> can return 0, causing canvas dimensions to become 0.</p>
+        </a>
+      </div>
+
+      <div class="test-card">
+        <a href="02-font-loading-race.html">
+          <div class="test-card-header">
+            <span class="test-number">2</span>
+            <span class="test-title">Font Loading Race Condition</span>
+          </div>
+          <p class="test-desc">Tests if measuring text before fonts load produces different/incorrect metrics.</p>
+        </a>
+      </div>
+
+      <div class="test-card">
+        <a href="03-canvas-clear-behavior.html">
+          <div class="test-card-header">
+            <span class="test-number">3</span>
+            <span class="test-title">Canvas Clear Behavior on Resize</span>
+          </div>
+          <p class="test-desc">Tests if canvas properly clears when dimensions change, and if context state persists.</p>
+        </a>
+      </div>
+
+      <div class="test-card">
+        <a href="04-font-size-loop-zero.html">
+          <div class="test-card-header">
+            <span class="test-number">4</span>
+            <span class="test-title">Font Size Loop Can Reach Zero</span>
+          </div>
+          <p class="test-desc">Tests the font-sizing algorithm from the text signature module to see if fontSize can become 0.</p>
+        </a>
+      </div>
+
+      <div class="test-card">
+        <a href="05-toDataURL-timing.html">
+          <div class="test-card-header">
+            <span class="test-number">5</span>
+            <span class="test-title">toDataURL Timing Issues</span>
+          </div>
+          <p class="test-desc">Tests for timing issues between drawing operations and <code>toDataURL()</code> capture.</p>
+        </a>
+      </div>
+
+      <div class="test-card">
+        <a href="06-firefox-specific.html">
+          <div class="test-card-header">
+            <span class="test-number">6</span>
+            <span class="test-title">Firefox-Specific Canvas Issues</span>
+          </div>
+          <p class="test-desc">Tests Firefox-specific behaviors: DPR, precision (f32 vs f64), fingerprint resistance, GPU acceleration.</p>
+        </a>
+      </div>
+
+      <div class="test-card">
+        <a href="07-complete-signature-flow.html">
+          <div class="test-card-header">
+            <span class="test-number">7</span>
+            <span class="test-title">Complete Signature Flow Simulation</span>
+          </div>
+          <p class="test-desc">Interactive test simulating the complete signature capture flow with draw and text modes.</p>
+        </a>
+      </div>
+
+      <div class="test-card">
+        <a href="08-edge-cases.html">
+          <div class="test-card-header">
+            <span class="test-number">8</span>
+            <span class="test-title">Edge Cases and Failure Modes</span>
+          </div>
+          <p class="test-desc">Tests context loss, willReadFrequently, canvas size limits, transform state, privacy protection, cross-origin tainting, GPU acceleration.</p>
+        </a>
+      </div>
+
+      <div class="test-card">
+        <a href="09-memory-pressure-pdf.html">
+          <div class="test-card-header">
+            <span class="test-number">9</span>
+            <span class="test-title">Real PDF Loading with PDF.js</span>
+          </div>
+          <p class="test-desc">Load and render real PDF files using PDF.js library, then generate signatures under memory pressure. Mimics exact customer experience with large documents.</p>
+        </a>
+      </div>
+    </div>
+
+    <h2>Hypotheses Being Tested</h2>
+
+    <table class="hypothesis-table">
+      <tr>
+        <th>Hypothesis</th>
+        <th>Test File</th>
+        <th>Code Location</th>
+      </tr>
+      <tr>
+        <td>Font metrics return 0 dimensions</td>
+        <td>Test 1, Test 2</td>
+        <td>the signature frame module</td>
+      </tr>
+      <tr>
+        <td>Font not loaded when measured</td>
+        <td>Test 2</td>
+        <td>the text signature module</td>
+      </tr>
+      <tr>
+        <td>Missing clearRect before draw</td>
+        <td>Test 3</td>
+        <td>the draw text logic</td>
+      </tr>
+      <tr>
+        <td>Font size loop reaches 0</td>
+        <td>Test 4</td>
+        <td>the text signature module</td>
+      </tr>
+      <tr>
+        <td>toDataURL timing with forceRedraw</td>
+        <td>Test 5</td>
+        <td>the draw signature module</td>
+      </tr>
+      <tr>
+        <td>Firefox f32 precision issues</td>
+        <td>Test 6</td>
+        <td>the rendering logic</td>
+      </tr>
+      <tr>
+        <td>Fingerprint resistance</td>
+        <td>Test 6, Test 8</td>
+        <td>Firefox privacy settings</td>
+      </tr>
+      <tr>
+        <td>Canvas context null/lost</td>
+        <td>Test 8</td>
+        <td><code>getContext('2d')</code> returns null</td>
+      </tr>
+      <tr>
+        <td>willReadFrequently hint</td>
+        <td>Test 8</td>
+        <td><code>getContext('2d', {willReadFrequently})</code></td>
+      </tr>
+      <tr>
+        <td>Canvas size limits exceeded</td>
+        <td>Test 8</td>
+        <td>Browser max canvas dimensions</td>
+      </tr>
+      <tr>
+        <td>Transform state issues</td>
+        <td>Test 8</td>
+        <td>DPR scale, clip, globalCompositeOperation</td>
+      </tr>
+      <tr>
+        <td>Cross-origin canvas tainting</td>
+        <td>Test 8</td>
+        <td><code>toDataURL</code> security error</td>
+      </tr>
+      <tr>
+        <td>GPU/hardware acceleration</td>
+        <td>Test 8</td>
+        <td>WebGL, render consistency</td>
+      </tr>
+      <tr>
+        <td>OffscreenCanvas differences</td>
+        <td>Test 8</td>
+        <td><code>OffscreenCanvas</code> vs regular canvas</td>
+      </tr>
+      <tr>
+        <td>Memory pressure with many canvases</td>
+        <td>Test 9</td>
+        <td>Multiple PDF pages + signature placeholders</td>
+      </tr>
+      <tr>
+        <td>Signature generation under load</td>
+        <td>Test 9</td>
+        <td>Canvas operations during memory stress</td>
+      </tr>
+      <tr>
+        <td>Rapid canvas create/destroy cycles</td>
+        <td>Test 9</td>
+        <td>GC timing affecting canvas data</td>
+      </tr>
+      <tr>
+        <td>GPU memory exhaustion</td>
+        <td>Test 9</td>
+        <td>Many canvas textures in GPU memory</td>
+      </tr>
+    </table>
+
+    <h2>Quick Commands</h2>
+
+    <div class="command-panel">
+      <div class="command-header">Serve files locally</div>
+      <div class="command-content">cd canvas-bug-tests
+python3 -m http.server 8080
+<span class="comment"># Then open http://localhost:8080</span></div>
+    </div>
+
+    <div class="command-panel" style="margin-top: 1rem;">
+      <div class="command-header">Firefox with limited resources (Windows)</div>
+      <div class="command-content"><span class="comment"># Disable GPU acceleration</span>
+set MOZ_DISABLE_GPU=1
+"C:\Program Files\Mozilla Firefox\firefox.exe"
+
+<span class="comment"># Or in about:config set:</span>
+gfx.canvas.accelerated = false
+layers.acceleration.disabled = true
+javascript.options.mem.max = 524288000  <span class="comment"># 500MB limit</span></div>
+    </div>
+
+    <div class="command-panel" style="margin-top: 1rem;">
+      <div class="command-header">Firefox with limited resources (macOS/Linux)</div>
+      <div class="command-content"><span class="comment"># Disable GPU acceleration</span>
+MOZ_DISABLE_GPU=1 /Applications/Firefox.app/Contents/MacOS/firefox
+
+    </div>
+  </div>
+
+  <script>
+    // Detect browser
+    const ua = navigator.userAgent;
+    let browserName = 'Unknown';
+    if (/Firefox\/(\d+)/.test(ua)) {
+      browserName = 'Firefox ' + ua.match(/Firefox\/(\d+)/)[1];
+    } else if (/Chrome\/(\d+)/.test(ua)) {
+      browserName = 'Chrome ' + ua.match(/Chrome\/(\d+)/)[1];
+    } else if (/Safari/.test(ua) && !/Chrome/.test(ua)) {
+      browserName = 'Safari';
+    } else if (/Edg\/(\d+)/.test(ua)) {
+      browserName = 'Edge ' + ua.match(/Edg\/(\d+)/)[1];
+    }
+
+    let platform = navigator.platform;
+    if (/Win/.test(ua)) platform = 'Windows';
+    else if (/Mac/.test(ua)) platform = 'macOS';
+    else if (/Linux/.test(ua)) platform = 'Linux';
+
+    document.getElementById('browser-name').textContent = browserName;
+    document.getElementById('platform').textContent = platform;
+    document.getElementById('dpr').textContent = window.devicePixelRatio;
+
+    // Highlight if matching target config
+    if (/Firefox/.test(browserName) && platform === 'Windows') {
+      document.getElementById('match-indicator').innerHTML = '<span class="match-badge">Matching target configuration</span>';
+    }
+  </script>
+</body>
+</html>

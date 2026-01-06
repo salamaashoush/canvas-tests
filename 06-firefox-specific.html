@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test 6: Firefox-Specific Canvas Issues</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #21262d;
+      --border-color: #30363d;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --text-muted: #6e7681;
+      --accent-blue: #58a6ff;
+      --accent-green: #3fb950;
+      --accent-red: #f85149;
+      --accent-yellow: #d29922;
+      --accent-purple: #a371f7;
+      --accent-cyan: #79c0ff;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 2rem;
+      line-height: 1.6;
+    }
+
+    .header {
+      max-width: 1400px;
+      margin: 0 auto 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .header h1 { font-size: 1.75rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .header p { color: var(--text-secondary); font-size: 0.95rem; }
+
+    .browser-banner {
+      background: linear-gradient(135deg, rgba(88, 166, 255, 0.1), rgba(121, 192, 255, 0.1));
+      border: 1px solid var(--accent-blue);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-top: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+    }
+
+    .browser-banner.firefox { border-color: #ff7139; background: linear-gradient(135deg, rgba(255, 113, 57, 0.1), rgba(255, 155, 57, 0.1)); }
+    .browser-banner.target { border-color: var(--accent-green); background: linear-gradient(135deg, rgba(63, 185, 80, 0.1), rgba(46, 160, 67, 0.1)); }
+
+    .summary-panel {
+      max-width: 1400px;
+      margin: 0 auto 2rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1rem;
+    }
+
+    .summary-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .summary-card .count {
+      font-size: 2rem;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .summary-card .label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 0.25rem;
+    }
+
+    .summary-card.pass .count { color: var(--accent-green); }
+    .summary-card.fail .count { color: var(--accent-red); }
+    .summary-card.warn .count { color: var(--accent-yellow); }
+    .summary-card.total .count { color: var(--accent-blue); }
+
+    .test-container { max-width: 1400px; margin: 0 auto; }
+
+    .test-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+
+    .test-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.5rem;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .test-header h2 {
+      font-size: 1rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .test-number {
+      background: var(--accent-blue);
+      color: var(--bg-primary);
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .test-description {
+      padding: 1rem 1.5rem;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .status-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.35rem 0.75rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .status-badge.pass { background: rgba(63, 185, 80, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
+    .status-badge.fail { background: rgba(248, 81, 73, 0.15); color: var(--accent-red); border: 1px solid var(--accent-red); }
+    .status-badge.warn { background: rgba(210, 153, 34, 0.15); color: var(--accent-yellow); border: 1px solid var(--accent-yellow); }
+    .status-badge.info { background: rgba(88, 166, 255, 0.15); color: var(--accent-blue); border: 1px solid var(--accent-blue); }
+    .status-badge.pending { background: rgba(139, 148, 158, 0.15); color: var(--text-secondary); border: 1px solid var(--text-secondary); }
+
+    .test-content { padding: 1.5rem; }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .info-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 1rem;
+    }
+
+    .info-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+
+    .info-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      color: var(--accent-cyan);
+    }
+
+    .canvas-wrapper {
+      padding: 1rem;
+      background: repeating-conic-gradient(var(--bg-tertiary) 0% 25%, var(--bg-secondary) 0% 50%) 50% / 16px 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+    }
+
+    canvas {
+      background: white;
+      border-radius: 4px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .log-section { margin-top: 1rem; }
+
+    .log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px 6px 0 0;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .log-header:hover { background: var(--bg-secondary); }
+    .log-header span { font-size: 0.85rem; color: var(--text-secondary); font-weight: 500; }
+    .log-toggle { color: var(--text-muted); font-size: 0.8rem; }
+
+    .log-content {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-top: none;
+      border-radius: 0 0 6px 6px;
+      padding: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.8;
+      max-height: 250px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      color: var(--text-secondary);
+    }
+
+    .log-content.collapsed { display: none; }
+
+    .browser-info {
+      max-width: 1400px;
+      margin: 2rem auto 0;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.25rem;
+    }
+
+    .browser-info h3 { font-size: 0.9rem; font-weight: 500; margin-bottom: 0.75rem; color: var(--text-secondary); }
+    .browser-info pre { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 1rem;
+      color: var(--accent-blue);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    .back-link:hover { text-decoration: underline; }
+
+    .metric-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+    }
+
+    .metric-table th,
+    .metric-table td {
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border-color);
+      text-align: left;
+    }
+
+    .metric-table th {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .metric-table td { color: var(--text-primary); }
+    .metric-table .supported { color: var(--accent-green); }
+    .metric-table .unsupported { color: var(--accent-red); }
+
+    /* Data URI Section - matches test 01 styling */
+    .data-uri-panel {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      margin-top: 16px;
+      overflow: hidden;
+    }
+
+    .data-uri-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+      cursor: pointer;
+    }
+
+    .data-uri-header:hover { background: #282e36; }
+
+    .data-uri-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .data-uri-toggle {
+      color: var(--text-muted);
+      font-size: 10px;
+      transition: transform 0.2s;
+    }
+
+    .data-uri-toggle.collapsed {
+      transform: rotate(-90deg);
+    }
+
+    .data-uri-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+    }
+
+    .data-uri-length {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--accent-purple);
+    }
+
+    .copy-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 4px 10px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: var(--accent-blue);
+      color: var(--bg-primary);
+      border-color: var(--accent-blue);
+    }
+
+    .copy-btn.copied {
+      background: var(--accent-green);
+      border-color: var(--accent-green);
+      color: var(--bg-primary);
+    }
+
+    .data-uri-content {
+      padding: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+      word-break: break-all;
+      max-height: 100px;
+      overflow-y: auto;
+      line-height: 1.8;
+    }
+
+    .data-uri-content.collapsed { display: none; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <a href="index.html" class="back-link">Back to Test Index</a>
+    <h1>Test 6: Firefox-Specific Canvas Issues</h1>
+    <p>Focuses on Firefox-specific canvas behaviors that may cause blank signatures.</p>
+    <div class="browser-banner" id="browser-banner">Detecting browser...</div>
+  </div>
+
+  <div class="summary-panel">
+    <div class="summary-card total"><div class="count" id="total-count">8</div><div class="label">Total Tests</div></div>
+    <div class="summary-card pass"><div class="count" id="pass-count">0</div><div class="label">Passed</div></div>
+    <div class="summary-card fail"><div class="count" id="fail-count">0</div><div class="label">Failed</div></div>
+    <div class="summary-card warn"><div class="count" id="warn-count">0</div><div class="label">Warnings</div></div>
+  </div>
+
+  <div class="test-container">
+    <!-- Test 6.1 -->
+    <div class="test-section">
+      <div class="test-header">
+        <h2><span class="test-number">6.1</span> Device Pixel Ratio Behavior</h2>
+        <span class="status-badge pending" id="test1-badge">PENDING</span>
+      </div>
+      <div class="test-description">
+        Firefox may report different DPR values, especially with privacy settings
+      </div>
+      <div class="test-content">
+        <div class="info-grid" id="dpr-info"></div>
+        <div class="log-section">
+          <div class="log-header" onclick="toggleLog('test1-log')">
+            <span>Debug Log</span>
+            <span class="log-toggle" id="test1-log-toggle">[expand]</span>
+          </div>
+          <pre class="log-content collapsed" id="test1-log"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test 6.2 -->
+    <div class="test-section">
+      <div class="test-header">
+        <h2><span class="test-number">6.2</span> Canvas Context Options</h2>
+        <span class="status-badge pending" id="test2-badge">PENDING</span>
+      </div>
+      <div class="test-description">
+        Testing different context options for performance
+      </div>
+      <div class="test-content">
+        <div class="log-section">
+          <div class="log-header" onclick="toggleLog('test2-log')">
+            <span>Debug Log</span>
+            <span class="log-toggle" id="test2-log-toggle">[expand]</span>
+          </div>
+          <pre class="log-content collapsed" id="test2-log"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test 6.3 -->
+    <div class="test-section">
+      <div class="test-header">
+        <h2><span class="test-number">6.3</span> Font Metrics Precision (f32 vs f64)</h2>
+        <span class="status-badge pending" id="test3-badge">PENDING</span>
+      </div>
+      <div class="test-description">
+        Testing the precision difference documented in the rendering logic
+      </div>
+      <div class="test-content">
+        <div class="info-grid" id="precision-info"></div>
+        <div class="log-section">
+          <div class="log-header" onclick="toggleLog('test3-log')">
+            <span>Debug Log</span>
+            <span class="log-toggle" id="test3-log-toggle">[expand]</span>
+          </div>
+          <pre class="log-content collapsed" id="test3-log"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test 6.4 -->
+    <div class="test-section">
+      <div class="test-header">
+        <h2><span class="test-number">6.4</span> Canvas Fingerprint Resistance Detection</h2>
+        <span class="status-badge pending" id="test4-badge">PENDING</span>
+      </div>
+      <div class="test-description">
+        Firefox can modify canvas output for privacy. This may affect signatures.
+      </div>
+      <div class="test-content">
+        <div class="canvas-wrapper">
+          <canvas id="canvas4" width="200" height="50"></canvas>
+        </div>
+        <div class="log-section">
+          <div class="log-header" onclick="toggleLog('test4-log')">
+            <span>Debug Log</span>
+            <span class="log-toggle" id="test4-log-toggle">[expand]</span>
+          </div>
+          <pre class="log-content collapsed" id="test4-log"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test 6.5 -->
+    <div class="test-section">
+      <div class="test-header">
+        <h2><span class="test-number">6.5</span> GPU Acceleration Detection</h2>
+        <span class="status-badge pending" id="test5-badge">PENDING</span>
+      </div>
+      <div class="test-description">
+        Hardware acceleration can affect canvas behavior
+      </div>
+      <div class="test-content">
+        <div class="info-grid" id="gpu-info"></div>
+        <div class="log-section">
+          <div class="log-header" onclick="toggleLog('test5-log')">
+            <span>Debug Log</span>
+            <span class="log-toggle" id="test5-log-toggle">[expand]</span>
+          </div>
+          <pre class="log-content collapsed" id="test5-log"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test 6.6 -->
+    <div class="test-section">
+      <div class="test-header">
+        <h2><span class="test-number">6.6</span> Canvas Size Limits</h2>
+        <span class="status-badge pending" id="test6-badge">PENDING</span>
+      </div>
+      <div class="test-description">
+        Testing browser-specific canvas size limits
+      </div>
+      <div class="test-content">
+        <div class="log-section">
+          <div class="log-header" onclick="toggleLog('test6-log')">
+            <span>Debug Log</span>
+            <span class="log-toggle" id="test6-log-toggle">[expand]</span>
+          </div>
+          <pre class="log-content collapsed" id="test6-log"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test 6.7 -->
+    <div class="test-section">
+      <div class="test-header">
+        <h2><span class="test-number">6.7</span> toDataURL Consistency</h2>
+        <span class="status-badge pending" id="test7-badge">PENDING</span>
+      </div>
+      <div class="test-description">
+        Multiple calls to toDataURL should produce identical results
+      </div>
+      <div class="test-content">
+        <div class="log-section">
+          <div class="log-header" onclick="toggleLog('test7-log')">
+            <span>Debug Log</span>
+            <span class="log-toggle" id="test7-log-toggle">[expand]</span>
+          </div>
+          <pre class="log-content collapsed" id="test7-log"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test 6.8 -->
+    <div class="test-section">
+      <div class="test-header">
+        <h2><span class="test-number">6.8</span> actualBoundingBox Support</h2>
+        <span class="status-badge pending" id="test8-badge">PENDING</span>
+      </div>
+      <div class="test-description">
+        Not all browsers support all TextMetrics properties
+      </div>
+      <div class="test-content">
+        <table class="metric-table" id="metrics-table"></table>
+        <div class="log-section">
+          <div class="log-header" onclick="toggleLog('test8-log')">
+            <span>Debug Log</span>
+            <span class="log-toggle" id="test8-log-toggle">[expand]</span>
+          </div>
+          <pre class="log-content collapsed" id="test8-log"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="browser-info">
+    <h3>Full Browser Details</h3>
+    <pre id="browser-details">Detecting...</pre>
+  </div>
+
+  <script>
+    let passCount = 0, failCount = 0, warnCount = 0;
+
+    function updateSummary() {
+      document.getElementById('pass-count').textContent = passCount;
+      document.getElementById('fail-count').textContent = failCount;
+      document.getElementById('warn-count').textContent = warnCount;
+    }
+
+    function log(elementId, message) {
+      document.getElementById(elementId).textContent += message + '\n';
+    }
+
+    function toggleLog(logId) {
+      const logContent = document.getElementById(logId);
+      const toggle = document.getElementById(logId + '-toggle');
+      logContent.classList.toggle('collapsed');
+      toggle.textContent = logContent.classList.contains('collapsed') ? '[expand]' : '[collapse]';
+    }
+
+    function toggleDataUri(contentId) {
+      const content = document.getElementById(contentId);
+      const toggle = document.getElementById(contentId + '-toggle');
+      content.classList.toggle('collapsed');
+      toggle.classList.toggle('collapsed');
+    }
+
+    function copyDataUri(contentId, btnId) {
+      const content = document.getElementById(contentId);
+      const btn = document.getElementById(btnId);
+      navigator.clipboard.writeText(content.textContent).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+
+    function showDataUri(contentId, dataUri) {
+      document.getElementById(contentId).textContent = dataUri;
+      document.getElementById(contentId + '-length').textContent = dataUri.length.toLocaleString() + ' chars';
+    }
+
+    function setResult(badgeId, status) {
+      const badge = document.getElementById(badgeId);
+      badge.className = 'status-badge ' + status;
+      badge.textContent = status === 'pass' ? 'PASS' : status === 'fail' ? 'FAIL' : status === 'info' ? 'INFO' : 'WARN';
+
+      if (status === 'pass') passCount++;
+      else if (status === 'fail') failCount++;
+      else if (status === 'warn' || status === 'info') warnCount++;
+
+      updateSummary();
+    }
+
+    // Browser Detection
+    (function() {
+      const ua = navigator.userAgent;
+      const isFirefox = /Firefox\/(\d+)/.test(ua);
+      const firefoxVersion = ua.match(/Firefox\/(\d+)/)?.[1];
+      const isWindows = /Windows/.test(ua);
+
+      const banner = document.getElementById('browser-banner');
+
+      if (isFirefox && isWindows) {
+        banner.className = 'browser-banner target';
+        banner.innerHTML = `Target Configuration Detected: Firefox ${firefoxVersion} on Windows`;
+      } else if (isFirefox) {
+        banner.className = 'browser-banner firefox';
+        banner.innerHTML = `Firefox ${firefoxVersion} detected - good for testing but bug is Windows-specific`;
+      } else {
+        banner.className = 'browser-banner';
+        banner.innerHTML = 'Not running Firefox - some tests may behave differently';
+      }
+    })();
+
+    // Test 6.1: DPR Behavior
+    (function() {
+      const dpr = window.devicePixelRatio;
+      const screenWidth = window.screen.width;
+      const screenHeight = window.screen.height;
+
+      document.getElementById('dpr-info').innerHTML = `
+        <div class="info-card"><div class="info-label">Device Pixel Ratio</div><div class="info-value">${dpr}</div></div>
+        <div class="info-card"><div class="info-label">Screen Size</div><div class="info-value">${screenWidth}x${screenHeight}</div></div>
+        <div class="info-card"><div class="info-label">Effective Resolution</div><div class="info-value">${Math.round(screenWidth * dpr)}x${Math.round(screenHeight * dpr)}</div></div>
+      `;
+
+      log('test1-log', `Device Pixel Ratio: ${dpr}`);
+      log('test1-log', `Screen: ${screenWidth}x${screenHeight}`);
+      log('test1-log', `Window inner: ${window.innerWidth}x${window.innerHeight}`);
+
+      if (dpr === 1 && screenWidth > 1920) {
+        setResult('test1-badge', 'warn');
+      } else if (dpr < 1 || !Number.isFinite(dpr)) {
+        setResult('test1-badge', 'fail');
+      } else {
+        setResult('test1-badge', 'pass');
+      }
+    })();
+
+    // Test 6.2: Canvas Context Options
+    (function() {
+      const tests = [
+        { name: 'default', options: undefined },
+        { name: 'willReadFrequently: false', options: { willReadFrequently: false } },
+        { name: 'willReadFrequently: true', options: { willReadFrequently: true } },
+        { name: 'alpha: false', options: { alpha: false } },
+        { name: 'desynchronized: true', options: { desynchronized: true } },
+      ];
+
+      tests.forEach(test => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 100;
+        canvas.height = 100;
+
+        try {
+          const ctx = canvas.getContext('2d', test.options);
+          if (ctx) {
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(0, 0, 100, 100);
+            const dataUri = canvas.toDataURL();
+            log('test2-log', `${test.name}: OK (data URI length: ${dataUri.length})`);
+          } else {
+            log('test2-log', `${test.name}: FAILED - context is null`);
+          }
+        } catch (e) {
+          log('test2-log', `${test.name}: ERROR - ${e.message}`);
+        }
+      });
+
+      setResult('test2-badge', 'pass');
+    })();
+
+    // Test 6.3: Precision Test
+    (function() {
+      const testValue = 1.6666666666666665 * 792;
+      const f32Value = Math.fround(testValue);
+      const f64Value = testValue;
+
+      document.getElementById('precision-info').innerHTML = `
+        <div class="info-card"><div class="info-label">f64 Result</div><div class="info-value">${f64Value}</div></div>
+        <div class="info-card"><div class="info-label">f32 Result</div><div class="info-value">${f32Value}</div></div>
+        <div class="info-card"><div class="info-label">Difference</div><div class="info-value">${Math.abs(f64Value - f32Value).toFixed(10)}</div></div>
+      `;
+
+      log('test3-log', `Test value: 1.6666666666666665 * 792`);
+      log('test3-log', `f64 result: ${f64Value}`);
+      log('test3-log', `f32 result: ${f32Value}`);
+      log('test3-log', `Difference: ${Math.abs(f64Value - f32Value)}`);
+
+      const div = document.createElement('div');
+      div.style.width = 'round(down, calc(1.6666666666666665 * 792px), 1px)';
+      document.body.appendChild(div);
+      const computedWidth = div.style.width;
+      document.body.removeChild(div);
+
+      log('test3-log', `\nCSS calc test: ${computedWidth}`);
+
+      if (computedWidth === 'calc(1320px)') {
+        setResult('test3-badge', 'info');
+      } else {
+        setResult('test3-badge', 'pass');
+      }
+    })();
+
+    // Test 6.4: Fingerprint Resistance
+    (function() {
+      const canvas = document.getElementById('canvas4');
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#f00';
+      ctx.fillRect(0, 0, 50, 50);
+      ctx.fillStyle = '#0f0';
+      ctx.fillRect(50, 0, 50, 50);
+      ctx.fillStyle = '#00f';
+      ctx.fillRect(100, 0, 50, 50);
+      ctx.fillStyle = '#000';
+      ctx.font = '14px Arial';
+      ctx.fillText('Test123', 155, 30);
+
+      const dataUris = [];
+      for (let i = 0; i < 5; i++) {
+        dataUris.push(canvas.toDataURL());
+      }
+
+      const allSame = dataUris.every(uri => uri === dataUris[0]);
+      log('test4-log', `Captured ${dataUris.length} data URIs`);
+      log('test4-log', `All identical: ${allSame}`);
+      log('test4-log', `Data URI length: ${dataUris[0].length}`);
+
+      if (!allSame) {
+        setResult('test4-badge', 'fail');
+        log('test4-log', '\n^ This can cause signature validation to fail!');
+      } else {
+        setResult('test4-badge', 'pass');
+      }
+    })();
+
+    // Test 6.5: GPU Acceleration
+    (function() {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+
+      if (gl) {
+        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+        if (debugInfo) {
+          const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+          const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+
+          document.getElementById('gpu-info').innerHTML = `
+            <div class="info-card"><div class="info-label">Vendor</div><div class="info-value">${vendor}</div></div>
+            <div class="info-card"><div class="info-label">Renderer</div><div class="info-value">${renderer}</div></div>
+          `;
+
+          log('test5-log', `WebGL Vendor: ${vendor}`);
+          log('test5-log', `WebGL Renderer: ${renderer}`);
+
+          if (renderer.includes('Software') || renderer.includes('SwiftShader') || renderer.includes('llvmpipe')) {
+            setResult('test5-badge', 'warn');
+          } else {
+            setResult('test5-badge', 'pass');
+          }
+        } else {
+          log('test5-log', 'WEBGL_debug_renderer_info not available');
+          setResult('test5-badge', 'warn');
+        }
+      } else {
+        log('test5-log', 'WebGL not available');
+        setResult('test5-badge', 'warn');
+      }
+    })();
+
+    // Test 6.6: Canvas Size Limits
+    (function() {
+      const testSizes = [
+        { w: 100, h: 100 },
+        { w: 4096, h: 4096 },
+        { w: 8192, h: 8192 },
+        { w: 16384, h: 16384 },
+        { w: 1, h: 1 },
+        { w: 0, h: 0 },
+      ];
+
+      let maxWorking = { w: 0, h: 0 };
+
+      testSizes.forEach(size => {
+        const canvas = document.createElement('canvas');
+        try {
+          canvas.width = size.w;
+          canvas.height = size.h;
+
+          const ctx = canvas.getContext('2d');
+          if (ctx && canvas.width === size.w && canvas.height === size.h) {
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(0, 0, Math.min(10, size.w), Math.min(10, size.h));
+            const dataUri = canvas.toDataURL();
+
+            if (dataUri && dataUri.length > 50) {
+              log('test6-log', `${size.w}x${size.h}: OK`);
+              if (size.w > maxWorking.w) maxWorking = size;
+            } else {
+              log('test6-log', `${size.w}x${size.h}: Empty data URI`);
+            }
+          } else {
+            log('test6-log', `${size.w}x${size.h}: Dimensions not applied`);
+          }
+        } catch (e) {
+          log('test6-log', `${size.w}x${size.h}: Error - ${e.message}`);
+        }
+      });
+
+      setResult('test6-badge', 'pass');
+    })();
+
+    // Test 6.7: toDataURL Consistency
+    (function() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 200;
+      canvas.height = 100;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#336699';
+      ctx.fillRect(0, 0, 200, 100);
+      ctx.fillStyle = '#fff';
+      ctx.font = '20px monospace';
+      ctx.fillText('Consistent?', 40, 55);
+
+      const uris = [];
+      for (let i = 0; i < 10; i++) {
+        uris.push(canvas.toDataURL('image/png'));
+      }
+
+      const unique = [...new Set(uris)];
+      log('test7-log', `Captured 10 data URIs`);
+      log('test7-log', `Unique URIs: ${unique.length}`);
+      log('test7-log', `First URI length: ${uris[0].length}`);
+
+      if (unique.length > 1) {
+        setResult('test7-badge', 'fail');
+      } else {
+        setResult('test7-badge', 'pass');
+      }
+    })();
+
+    // Test 6.8: TextMetrics actualBoundingBox Support
+    (function() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 400;
+      canvas.height = 100;
+      const ctx = canvas.getContext('2d');
+      ctx.font = '48px Arial';
+
+      const metrics = ctx.measureText('Test');
+
+      const properties = [
+        'width', 'actualBoundingBoxLeft', 'actualBoundingBoxRight',
+        'actualBoundingBoxAscent', 'actualBoundingBoxDescent',
+        'fontBoundingBoxAscent', 'fontBoundingBoxDescent'
+      ];
+
+      let tableHTML = '<tr><th>Property</th><th>Value</th><th>Status</th></tr>';
+      let criticalMissing = false;
+
+      properties.forEach(prop => {
+        const value = metrics[prop];
+        const supported = value !== undefined;
+        const isCritical = prop.includes('actualBoundingBox');
+
+        if (isCritical && !supported) criticalMissing = true;
+
+        tableHTML += `<tr>
+          <td>${prop}</td>
+          <td>${supported ? value.toFixed(2) : 'undefined'}</td>
+          <td class="${supported ? 'supported' : 'unsupported'}">${supported ? 'Supported' : 'Not Supported'}</td>
+        </tr>`;
+
+        log('test8-log', `${prop}: ${supported ? value : 'undefined'}`);
+      });
+
+      document.getElementById('metrics-table').innerHTML = tableHTML;
+
+      if (criticalMissing) {
+        setResult('test8-badge', 'fail');
+      } else {
+        setResult('test8-badge', 'pass');
+      }
+    })();
+
+    // Browser details
+    document.getElementById('browser-details').textContent = `User Agent: ${navigator.userAgent}
+Platform: ${navigator.platform}
+Device Pixel Ratio: ${window.devicePixelRatio}
+Screen: ${window.screen.width}x${window.screen.height}
+Window: ${window.innerWidth}x${window.innerHeight}`;
+  </script>
+</body>
+</html>

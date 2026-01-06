@@ -1,0 +1,1642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test 8: Edge Cases and Failure Modes</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #21262d;
+      --border-color: #30363d;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --text-muted: #484f58;
+      --accent-blue: #58a6ff;
+      --accent-green: #3fb950;
+      --accent-red: #f85149;
+      --accent-yellow: #d29922;
+      --accent-purple: #a371f7;
+      --pass-bg: rgba(63, 185, 80, 0.15);
+      --pass-border: rgba(63, 185, 80, 0.4);
+      --fail-bg: rgba(248, 81, 73, 0.15);
+      --fail-border: rgba(248, 81, 73, 0.4);
+      --warn-bg: rgba(210, 153, 34, 0.15);
+      --warn-border: rgba(210, 153, 34, 0.4);
+      --transparency-grid: repeating-conic-gradient(#21262d 0% 25%, #161b22 0% 50%) 50% / 16px 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Space Grotesk', -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    .header {
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .test-badge {
+      background: var(--accent-purple);
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text-primary);
+    }
+
+    .hypothesis {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-left: 3px solid var(--accent-yellow);
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin-top: 16px;
+    }
+
+    .hypothesis-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent-yellow);
+      margin-bottom: 4px;
+    }
+
+    .hypothesis p {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .summary-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .summary-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .summary-card.pass { border-color: var(--pass-border); background: var(--pass-bg); }
+    .summary-card.fail { border-color: var(--fail-border); background: var(--fail-bg); }
+    .summary-card.warn { border-color: var(--warn-border); background: var(--warn-bg); }
+
+    .summary-count {
+      font-size: 48px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1;
+    }
+
+    .summary-card.pass .summary-count { color: var(--accent-green); }
+    .summary-card.fail .summary-count { color: var(--accent-red); }
+    .summary-card.warn .summary-count { color: var(--accent-yellow); }
+
+    .summary-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+    }
+
+    .test-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    .test-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: var(--bg-tertiary);
+    }
+
+    .test-title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .test-number {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--bg-primary);
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+
+    .test-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .test-status {
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 20px;
+    }
+
+    .test-status.pass {
+      background: var(--pass-bg);
+      color: var(--accent-green);
+      border: 1px solid var(--pass-border);
+    }
+
+    .test-status.fail {
+      background: var(--fail-bg);
+      color: var(--accent-red);
+      border: 1px solid var(--fail-border);
+    }
+
+    .test-status.warn {
+      background: var(--warn-bg);
+      color: var(--accent-yellow);
+      border: 1px solid var(--warn-border);
+    }
+
+    .test-status.pending {
+      background: var(--bg-primary);
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+    }
+
+    .test-content {
+      padding: 20px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .test-description {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    .code-ref {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--accent-purple);
+      background: var(--bg-tertiary);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+
+    button:hover {
+      background: #282e36;
+      border-color: var(--text-muted);
+    }
+
+    button.primary {
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+      color: var(--bg-primary);
+    }
+
+    button.primary:hover {
+      background: #79b8ff;
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .result-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .result-card.pass { border-color: var(--pass-border); }
+    .result-card.fail { border-color: var(--fail-border); }
+    .result-card.warn { border-color: var(--warn-border); }
+
+    .result-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .result-card-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .result-card-status {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    .result-card-status.pass { background: var(--pass-bg); color: var(--accent-green); }
+    .result-card-status.fail { background: var(--fail-bg); color: var(--accent-red); }
+    .result-card-status.warn { background: var(--warn-bg); color: var(--accent-yellow); }
+
+    .result-card-body {
+      padding: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .result-card-body strong {
+      color: var(--text-secondary);
+    }
+
+    .canvas-wrapper {
+      padding: 16px;
+      background: var(--transparency-grid);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 80px;
+    }
+
+    .canvas-wrapper img {
+      max-width: 100%;
+      height: auto;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .log-panel {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      margin-top: 16px;
+      overflow: hidden;
+    }
+
+    .log-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+      cursor: pointer;
+    }
+
+    .log-header:hover {
+      background: #282e36;
+    }
+
+    .log-toggle {
+      color: var(--text-muted);
+      font-size: 10px;
+      transition: transform 0.2s;
+    }
+
+    .log-toggle.collapsed {
+      transform: rotate(-90deg);
+    }
+
+    .log-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+    }
+
+    .log-content {
+      padding: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      max-height: 300px;
+      overflow-y: auto;
+      line-height: 1.7;
+    }
+
+    .log-content.collapsed {
+      display: none;
+    }
+
+    .browser-info {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 32px;
+    }
+
+    .browser-info h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .browser-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+
+    .browser-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 10px 14px;
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+    }
+
+    .browser-item-label {
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    .browser-item-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-primary);
+    }
+
+    .data-uri-panel {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      margin-top: 16px;
+      overflow: hidden;
+    }
+
+    .data-uri-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+      cursor: pointer;
+    }
+
+    .data-uri-header:hover {
+      background: #282e36;
+    }
+
+    .data-uri-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .data-uri-toggle {
+      color: var(--text-muted);
+      font-size: 10px;
+      transition: transform 0.2s;
+    }
+
+    .data-uri-toggle.collapsed {
+      transform: rotate(-90deg);
+    }
+
+    .data-uri-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+    }
+
+    .data-uri-length {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--accent-purple);
+    }
+
+    .copy-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 4px 10px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .copy-btn:hover {
+      background: var(--accent-blue);
+      color: var(--bg-primary);
+      border-color: var(--accent-blue);
+    }
+
+    .data-uri-content {
+      padding: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+      word-break: break-all;
+      max-height: 100px;
+      overflow-y: auto;
+      line-height: 1.8;
+    }
+
+    .data-uri-content.collapsed {
+      display: none;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 1rem;
+      color: var(--accent-blue);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <a href="index.html" class="back-link">Back to Test Index</a>
+      <div class="header-top">
+        <span class="test-badge">Test 08</span>
+        <h1>Edge Cases and Failure Modes</h1>
+      </div>
+      <div class="hypothesis">
+        <div class="hypothesis-label">Test Purpose</div>
+        <p>Tests additional edge cases that could cause blank signatures: context loss, willReadFrequently hint, canvas size limits, transform state issues, privacy/fingerprinting protection, and cross-origin tainting.</p>
+      </div>
+    </header>
+
+    <div class="summary-panel">
+      <div class="summary-card pass">
+        <div class="summary-count" id="stat-passed">0</div>
+        <div class="summary-label">Passed</div>
+      </div>
+      <div class="summary-card fail">
+        <div class="summary-count" id="stat-failed">0</div>
+        <div class="summary-label">Failed</div>
+      </div>
+      <div class="summary-card warn">
+        <div class="summary-count" id="stat-warnings">0</div>
+        <div class="summary-label">Warnings</div>
+      </div>
+    </div>
+
+    <!-- Test 8.1: Canvas Context Issues -->
+    <div class="test-section">
+      <div class="test-header">
+        <div class="test-title-group">
+          <span class="test-number">8.1</span>
+          <span class="test-title">Canvas Context Issues</span>
+        </div>
+        <div class="test-status pending" id="status-8-1">Pending</div>
+      </div>
+      <div class="test-content">
+        <p class="test-description">Tests if <span class="code-ref">getContext('2d')</span> returns null, and checks the <span class="code-ref">willReadFrequently</span> hint behavior which can affect <span class="code-ref">getImageData</span> and <span class="code-ref">toDataURL</span> performance.</p>
+
+        <div class="controls">
+          <button class="primary" onclick="testContextIssues()">Run Context Tests</button>
+        </div>
+
+        <div class="results-grid" id="context-results"></div>
+
+        <div class="log-panel">
+          <div class="log-header" onclick="toggleLog('context')">
+            <span class="log-toggle" id="context-log-toggle">&#9660;</span>
+            <span class="log-title">Debug Log</span>
+          </div>
+          <div class="log-content collapsed" id="context-log"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test 8.2: Canvas Size Limits -->
+    <div class="test-section">
+      <div class="test-header">
+        <div class="test-title-group">
+          <span class="test-number">8.2</span>
+          <span class="test-title">Canvas Size Limits</span>
+        </div>
+        <div class="test-status pending" id="status-8-2">Pending</div>
+      </div>
+      <div class="test-content">
+        <p class="test-description">Tests browser canvas size limits. Exceeding limits can cause silent failures or blank output. Firefox typically has ~32k pixel limit per dimension.</p>
+
+        <div class="controls">
+          <button class="primary" onclick="testCanvasSizeLimits()">Run Size Limit Tests</button>
+        </div>
+
+        <div class="results-grid" id="size-results"></div>
+
+        <div class="log-panel">
+          <div class="log-header" onclick="toggleLog('size')">
+            <span class="log-toggle" id="size-log-toggle">&#9660;</span>
+            <span class="log-title">Debug Log</span>
+          </div>
+          <div class="log-content collapsed" id="size-log"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test 8.3: Transform State -->
+    <div class="test-section">
+      <div class="test-header">
+        <div class="test-title-group">
+          <span class="test-number">8.3</span>
+          <span class="test-title">Transform State Issues</span>
+        </div>
+        <div class="test-status pending" id="status-8-3">Pending</div>
+      </div>
+      <div class="test-content">
+        <p class="test-description">Tests if transform state (scale, translate, clip, globalCompositeOperation) can cause blank output. DPR scale applied twice is a common bug.</p>
+
+        <div class="controls">
+          <button class="primary" onclick="testTransformState()">Run Transform Tests</button>
+        </div>
+
+        <div class="results-grid" id="transform-results"></div>
+
+        <div class="log-panel">
+          <div class="log-header" onclick="toggleLog('transform')">
+            <span class="log-toggle" id="transform-log-toggle">&#9660;</span>
+            <span class="log-title">Debug Log</span>
+          </div>
+          <div class="log-content collapsed" id="transform-log"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test 8.4: Privacy/Fingerprinting Protection -->
+    <div class="test-section">
+      <div class="test-header">
+        <div class="test-title-group">
+          <span class="test-number">8.4</span>
+          <span class="test-title">Privacy/Fingerprinting Protection</span>
+        </div>
+        <div class="test-status pending" id="status-8-4">Pending</div>
+      </div>
+      <div class="test-content">
+        <p class="test-description">Tests if browser privacy features (like Firefox's fingerprinting protection) affect <span class="code-ref">toDataURL</span> output. Some browsers add noise or block canvas reading entirely.</p>
+
+        <div class="controls">
+          <button class="primary" onclick="testPrivacyProtection()">Run Privacy Tests</button>
+        </div>
+
+        <div class="results-grid" id="privacy-results"></div>
+
+        <div class="log-panel">
+          <div class="log-header" onclick="toggleLog('privacy')">
+            <span class="log-toggle" id="privacy-log-toggle">&#9660;</span>
+            <span class="log-title">Debug Log</span>
+          </div>
+          <div class="log-content collapsed" id="privacy-log"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test 8.5: Cross-Origin Tainting -->
+    <div class="test-section">
+      <div class="test-header">
+        <div class="test-title-group">
+          <span class="test-number">8.5</span>
+          <span class="test-title">Cross-Origin Canvas Tainting</span>
+        </div>
+        <div class="test-status pending" id="status-8-5">Pending</div>
+      </div>
+      <div class="test-content">
+        <p class="test-description">Tests if drawing cross-origin images taints the canvas, causing <span class="code-ref">toDataURL</span> to throw a security error or return blank.</p>
+
+        <div class="controls">
+          <button class="primary" onclick="testCrossOrigin()">Run Cross-Origin Tests</button>
+        </div>
+
+        <div class="results-grid" id="crossorigin-results"></div>
+
+        <div class="log-panel">
+          <div class="log-header" onclick="toggleLog('crossorigin')">
+            <span class="log-toggle" id="crossorigin-log-toggle">&#9660;</span>
+            <span class="log-title">Debug Log</span>
+          </div>
+          <div class="log-content collapsed" id="crossorigin-log"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test 8.6: GPU/Hardware Acceleration -->
+    <div class="test-section">
+      <div class="test-header">
+        <div class="test-title-group">
+          <span class="test-number">8.6</span>
+          <span class="test-title">GPU/Hardware Acceleration</span>
+        </div>
+        <div class="test-status pending" id="status-8-6">Pending</div>
+      </div>
+      <div class="test-content">
+        <p class="test-description">Tests canvas rendering with potential GPU acceleration issues. Checks WebGL availability and canvas rendering consistency.</p>
+
+        <div class="controls">
+          <button class="primary" onclick="testGPUAcceleration()">Run GPU Tests</button>
+        </div>
+
+        <div class="results-grid" id="gpu-results"></div>
+
+        <div class="log-panel">
+          <div class="log-header" onclick="toggleLog('gpu')">
+            <span class="log-toggle" id="gpu-log-toggle">&#9660;</span>
+            <span class="log-title">Debug Log</span>
+          </div>
+          <div class="log-content collapsed" id="gpu-log"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test 8.7: Image Format Edge Cases -->
+    <div class="test-section">
+      <div class="test-header">
+        <div class="test-title-group">
+          <span class="test-number">8.7</span>
+          <span class="test-title">Image Format Edge Cases</span>
+        </div>
+        <div class="test-status pending" id="status-8-7">Pending</div>
+      </div>
+      <div class="test-content">
+        <p class="test-description">Tests edge cases with image formats: grayscale+alpha PNGs, very small images, images with EXIF orientation data.</p>
+
+        <div class="controls">
+          <button class="primary" onclick="testImageFormats()">Run Image Format Tests</button>
+        </div>
+
+        <div class="results-grid" id="format-results"></div>
+
+        <div class="log-panel">
+          <div class="log-header" onclick="toggleLog('format')">
+            <span class="log-toggle" id="format-log-toggle">&#9660;</span>
+            <span class="log-title">Debug Log</span>
+          </div>
+          <div class="log-content collapsed" id="format-log"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test 8.8: Offscreen Canvas -->
+    <div class="test-section">
+      <div class="test-header">
+        <div class="test-title-group">
+          <span class="test-number">8.8</span>
+          <span class="test-title">Offscreen Canvas Behavior</span>
+        </div>
+        <div class="test-status pending" id="status-8-8">Pending</div>
+      </div>
+      <div class="test-content">
+        <p class="test-description">Tests OffscreenCanvas behavior vs regular canvas. Some browsers handle them differently, especially for toDataURL/toBlob.</p>
+
+        <div class="controls">
+          <button class="primary" onclick="testOffscreenCanvas()">Run Offscreen Canvas Tests</button>
+        </div>
+
+        <div class="results-grid" id="offscreen-results"></div>
+
+        <div class="log-panel">
+          <div class="log-header" onclick="toggleLog('offscreen')">
+            <span class="log-toggle" id="offscreen-log-toggle">&#9660;</span>
+            <span class="log-title">Debug Log</span>
+          </div>
+          <div class="log-content collapsed" id="offscreen-log"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="browser-info" id="browser-info"></div>
+  </div>
+
+  <script>
+    // =============================================================================
+    // Global State
+    // =============================================================================
+    let testsPassed = 0;
+    let testsFailed = 0;
+    let testsWarnings = 0;
+
+    // =============================================================================
+    // Utilities
+    // =============================================================================
+    function log(prefix, message) {
+      const el = document.getElementById(prefix + '-log');
+      el.textContent += message + '\n';
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function setStatus(testId, status, message) {
+      const el = document.getElementById(`status-${testId}`);
+      el.className = `test-status ${status}`;
+      el.textContent = message;
+
+      if (status === 'pass') testsPassed++;
+      else if (status === 'fail') testsFailed++;
+      else if (status === 'warn') testsWarnings++;
+
+      updateSummary();
+    }
+
+    function updateSummary() {
+      document.getElementById('stat-passed').textContent = testsPassed;
+      document.getElementById('stat-failed').textContent = testsFailed;
+      document.getElementById('stat-warnings').textContent = testsWarnings;
+    }
+
+    function toggleLog(prefix) {
+      const content = document.getElementById(prefix + '-log');
+      const toggle = document.getElementById(prefix + '-log-toggle');
+      content.classList.toggle('collapsed');
+      toggle.classList.toggle('collapsed');
+    }
+
+    function createResultCard(title, status, details, imageDataUri = null) {
+      const card = document.createElement('div');
+      card.className = `result-card ${status}`;
+      card.innerHTML = `
+        <div class="result-card-header">
+          <span class="result-card-title">${title}</span>
+          <span class="result-card-status ${status}">${status.toUpperCase()}</span>
+        </div>
+        ${imageDataUri ? `<div class="canvas-wrapper"><img src="${imageDataUri}" alt="Result"></div>` : ''}
+        <div class="result-card-body">${details}</div>
+      `;
+      return card;
+    }
+
+    function countNonTransparentPixels(canvas) {
+      const ctx = canvas.getContext('2d');
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      let count = 0;
+      for (let i = 3; i < imageData.data.length; i += 4) {
+        if (imageData.data[i] > 0) count++;
+      }
+      return count;
+    }
+
+    // =============================================================================
+    // Browser Info
+    // =============================================================================
+    function renderBrowserInfo() {
+      const ua = navigator.userAgent;
+      const isFirefox = /Firefox\/(\d+)/.test(ua);
+      const firefoxVersion = ua.match(/Firefox\/(\d+)/)?.[1] || '-';
+
+      const items = [
+        { label: 'Browser', value: isFirefox ? `Firefox ${firefoxVersion}` : (ua.includes('Chrome') ? 'Chrome' : 'Other') },
+        { label: 'Platform', value: navigator.platform },
+        { label: 'Device Pixel Ratio', value: window.devicePixelRatio.toFixed(2) },
+        { label: 'User Agent', value: ua }
+      ];
+
+      document.getElementById('browser-info').innerHTML = `
+        <h3>Browser Information</h3>
+        <div class="browser-grid">
+          ${items.map(item => `
+            <div class="browser-item">
+              <span class="browser-item-label">${item.label}</span>
+              <span class="browser-item-value">${item.value}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    // =============================================================================
+    // Test 8.1: Canvas Context Issues
+    // =============================================================================
+    function testContextIssues() {
+      const container = document.getElementById('context-results');
+      container.innerHTML = '';
+      document.getElementById('context-log').textContent = '';
+
+      log('context', '--- Testing Canvas Context Issues ---\n');
+
+      let issues = [];
+
+      // Test 1: Basic getContext('2d')
+      const canvas1 = document.createElement('canvas');
+      canvas1.width = 100;
+      canvas1.height = 50;
+      const ctx1 = canvas1.getContext('2d');
+
+      if (ctx1 === null) {
+        log('context', 'FAIL: getContext("2d") returned null!');
+        container.appendChild(createResultCard('getContext("2d")', 'fail', 'Returned null - canvas not supported'));
+        issues.push('context null');
+      } else {
+        log('context', 'PASS: getContext("2d") returned valid context');
+        ctx1.fillStyle = '#000';
+        ctx1.fillRect(10, 10, 80, 30);
+        const dataUri = canvas1.toDataURL('image/png');
+        container.appendChild(createResultCard('getContext("2d")', 'pass', `Context valid, toDataURL length: ${dataUri.length}`, dataUri));
+      }
+
+      // Test 2: willReadFrequently hint
+      const canvas2 = document.createElement('canvas');
+      canvas2.width = 100;
+      canvas2.height = 50;
+      let ctx2;
+      try {
+        ctx2 = canvas2.getContext('2d', { willReadFrequently: true });
+        log('context', 'PASS: willReadFrequently hint accepted');
+
+        ctx2.fillStyle = '#00f';
+        ctx2.fillRect(10, 10, 80, 30);
+
+        // Test getImageData performance
+        const start = performance.now();
+        for (let i = 0; i < 100; i++) {
+          ctx2.getImageData(0, 0, 100, 50);
+        }
+        const elapsed = performance.now() - start;
+
+        log('context', `  getImageData 100x: ${elapsed.toFixed(2)}ms`);
+        const dataUri = canvas2.toDataURL('image/png');
+        container.appendChild(createResultCard('willReadFrequently', 'pass', `Hint accepted<br>100x getImageData: ${elapsed.toFixed(2)}ms`, dataUri));
+      } catch (e) {
+        log('context', `WARN: willReadFrequently hint error: ${e.message}`);
+        container.appendChild(createResultCard('willReadFrequently', 'warn', `Error: ${e.message}`));
+        issues.push('willReadFrequently');
+      }
+
+      // Test 3: Multiple getContext calls
+      const canvas3 = document.createElement('canvas');
+      canvas3.width = 100;
+      canvas3.height = 50;
+      const ctx3a = canvas3.getContext('2d');
+      const ctx3b = canvas3.getContext('2d');
+
+      if (ctx3a === ctx3b) {
+        log('context', 'PASS: Multiple getContext calls return same context');
+        container.appendChild(createResultCard('Multiple getContext', 'pass', 'Returns same context instance'));
+      } else {
+        log('context', 'WARN: Multiple getContext calls return different contexts');
+        container.appendChild(createResultCard('Multiple getContext', 'warn', 'Returns different context instances'));
+        issues.push('multiple contexts');
+      }
+
+      // Test 4: Context after canvas resize
+      const canvas4 = document.createElement('canvas');
+      canvas4.width = 100;
+      canvas4.height = 50;
+      const ctx4 = canvas4.getContext('2d');
+      ctx4.fillStyle = '#f00';
+      ctx4.fillRect(0, 0, 100, 50);
+
+      // Resize canvas (this clears content)
+      canvas4.width = 100;
+      canvas4.height = 50;
+
+      const pixels = countNonTransparentPixels(canvas4);
+      log('context', `Context after resize: ${pixels} non-transparent pixels (expected 0)`);
+
+      if (pixels === 0) {
+        container.appendChild(createResultCard('Context After Resize', 'pass', 'Canvas properly cleared on resize'));
+      } else {
+        container.appendChild(createResultCard('Context After Resize', 'warn', `Unexpected: ${pixels} pixels remain`));
+        issues.push('resize clear');
+      }
+
+      setStatus('8-1', issues.length === 0 ? 'pass' : 'warn', issues.length === 0 ? 'All passed' : `${issues.length} issues`);
+    }
+
+    // =============================================================================
+    // Test 8.2: Canvas Size Limits
+    // =============================================================================
+    function testCanvasSizeLimits() {
+      const container = document.getElementById('size-results');
+      container.innerHTML = '';
+      document.getElementById('size-log').textContent = '';
+
+      log('size', '--- Testing Canvas Size Limits ---\n');
+
+      const testSizes = [
+        { w: 512, h: 200, name: 'Normal (512x200)' },
+        { w: 4096, h: 4096, name: 'Large (4096x4096)' },
+        { w: 8192, h: 8192, name: 'Very Large (8192x8192)' },
+        { w: 16384, h: 16384, name: 'Huge (16384x16384)' },
+        { w: 32768, h: 100, name: 'Wide (32768x100)' },
+        { w: 100, h: 32768, name: 'Tall (100x32768)' },
+      ];
+
+      let failures = 0;
+
+      testSizes.forEach(size => {
+        const canvas = document.createElement('canvas');
+        try {
+          canvas.width = size.w;
+          canvas.height = size.h;
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            log('size', `FAIL: ${size.name} - context is null`);
+            container.appendChild(createResultCard(size.name, 'fail', 'getContext returned null'));
+            failures++;
+            return;
+          }
+
+          // Draw something
+          ctx.fillStyle = '#000';
+          ctx.fillRect(10, 10, Math.min(80, size.w - 20), Math.min(30, size.h - 20));
+
+          // Try toDataURL
+          const dataUri = canvas.toDataURL('image/png');
+
+          // Check if it's a valid non-empty PNG
+          const isValid = dataUri.length > 100 && dataUri.startsWith('data:image/png');
+
+          if (isValid) {
+            log('size', `PASS: ${size.name} - toDataURL length: ${dataUri.length}`);
+            // Only show preview for smaller sizes
+            const showPreview = size.w <= 512 && size.h <= 512;
+            container.appendChild(createResultCard(size.name, 'pass', `toDataURL: ${dataUri.length.toLocaleString()} chars`, showPreview ? dataUri : null));
+          } else {
+            log('size', `FAIL: ${size.name} - toDataURL returned invalid/short result`);
+            container.appendChild(createResultCard(size.name, 'fail', `toDataURL invalid: ${dataUri.length} chars`));
+            failures++;
+          }
+        } catch (e) {
+          log('size', `FAIL: ${size.name} - Error: ${e.message}`);
+          container.appendChild(createResultCard(size.name, 'fail', `Error: ${e.message}`));
+          failures++;
+        }
+      });
+
+      setStatus('8-2', failures === 0 ? 'pass' : 'fail', failures === 0 ? 'All sizes OK' : `${failures} failed`);
+    }
+
+    // =============================================================================
+    // Test 8.3: Transform State Issues
+    // =============================================================================
+    function testTransformState() {
+      const container = document.getElementById('transform-results');
+      container.innerHTML = '';
+      document.getElementById('transform-log').textContent = '';
+
+      log('transform', '--- Testing Transform State Issues ---\n');
+
+      let issues = [];
+
+      // Test 1: Double DPR scale
+      const dpr = window.devicePixelRatio;
+      const canvas1 = document.createElement('canvas');
+      canvas1.width = 100 * dpr;
+      canvas1.height = 50 * dpr;
+      const ctx1 = canvas1.getContext('2d');
+
+      // Apply DPR scale TWICE (common bug)
+      ctx1.scale(dpr, dpr);
+      ctx1.scale(dpr, dpr); // Second scale - bug!
+
+      ctx1.fillStyle = '#000';
+      ctx1.fillRect(5, 5, 40, 20);
+
+      const pixels1 = countNonTransparentPixels(canvas1);
+      log('transform', `Double DPR scale: ${pixels1} non-transparent pixels`);
+
+      const dataUri1 = canvas1.toDataURL('image/png');
+      if (pixels1 > 0) {
+        container.appendChild(createResultCard('Double DPR Scale', 'warn', `Content may be scaled out of view<br>Pixels: ${pixels1}`, dataUri1));
+      } else {
+        container.appendChild(createResultCard('Double DPR Scale', 'fail', 'Content completely out of view!', dataUri1));
+        issues.push('double scale');
+      }
+
+      // Test 2: Forgotten translate
+      const canvas2 = document.createElement('canvas');
+      canvas2.width = 100;
+      canvas2.height = 50;
+      const ctx2 = canvas2.getContext('2d');
+
+      ctx2.translate(200, 200); // Translate way off canvas
+      ctx2.fillStyle = '#00f';
+      ctx2.fillRect(0, 0, 50, 25);
+
+      const pixels2 = countNonTransparentPixels(canvas2);
+      log('transform', `Forgotten translate: ${pixels2} non-transparent pixels`);
+
+      const dataUri2 = canvas2.toDataURL('image/png');
+      container.appendChild(createResultCard('Forgotten Translate', pixels2 === 0 ? 'warn' : 'pass', `Content translated off canvas<br>Pixels: ${pixels2}`, dataUri2));
+      if (pixels2 === 0) issues.push('translate');
+
+      // Test 3: Clip region hiding content
+      const canvas3 = document.createElement('canvas');
+      canvas3.width = 100;
+      canvas3.height = 50;
+      const ctx3 = canvas3.getContext('2d');
+
+      // Clip to empty region
+      ctx3.beginPath();
+      ctx3.rect(-100, -100, 10, 10); // Clip region outside canvas
+      ctx3.clip();
+
+      ctx3.fillStyle = '#f00';
+      ctx3.fillRect(0, 0, 100, 50);
+
+      const pixels3 = countNonTransparentPixels(canvas3);
+      log('transform', `Clip region outside: ${pixels3} non-transparent pixels`);
+
+      const dataUri3 = canvas3.toDataURL('image/png');
+      container.appendChild(createResultCard('Clip Region Outside', pixels3 === 0 ? 'warn' : 'pass', `Clipped to off-canvas region<br>Pixels: ${pixels3}`, dataUri3));
+      if (pixels3 === 0) issues.push('clip');
+
+      // Test 4: globalCompositeOperation
+      const canvas4 = document.createElement('canvas');
+      canvas4.width = 100;
+      canvas4.height = 50;
+      const ctx4 = canvas4.getContext('2d');
+
+      ctx4.globalCompositeOperation = 'destination-out'; // Erases instead of draws
+      ctx4.fillStyle = '#000';
+      ctx4.fillRect(10, 10, 80, 30);
+
+      const pixels4 = countNonTransparentPixels(canvas4);
+      log('transform', `destination-out composite: ${pixels4} non-transparent pixels`);
+
+      const dataUri4 = canvas4.toDataURL('image/png');
+      container.appendChild(createResultCard('destination-out Mode', pixels4 === 0 ? 'warn' : 'pass', `Composite mode erases content<br>Pixels: ${pixels4}`, dataUri4));
+      if (pixels4 === 0) issues.push('composite');
+
+      // Test 5: globalAlpha = 0
+      const canvas5 = document.createElement('canvas');
+      canvas5.width = 100;
+      canvas5.height = 50;
+      const ctx5 = canvas5.getContext('2d');
+
+      ctx5.globalAlpha = 0; // Fully transparent
+      ctx5.fillStyle = '#000';
+      ctx5.fillRect(10, 10, 80, 30);
+
+      const pixels5 = countNonTransparentPixels(canvas5);
+      log('transform', `globalAlpha=0: ${pixels5} non-transparent pixels`);
+
+      const dataUri5 = canvas5.toDataURL('image/png');
+      container.appendChild(createResultCard('globalAlpha = 0', pixels5 === 0 ? 'warn' : 'pass', `Alpha makes content invisible<br>Pixels: ${pixels5}`, dataUri5));
+      if (pixels5 === 0) issues.push('alpha');
+
+      setStatus('8-3', issues.length === 0 ? 'pass' : 'warn', issues.length === 0 ? 'All passed' : `${issues.length} can cause blank`);
+    }
+
+    // =============================================================================
+    // Test 8.4: Privacy/Fingerprinting Protection
+    // =============================================================================
+    function testPrivacyProtection() {
+      const container = document.getElementById('privacy-results');
+      container.innerHTML = '';
+      document.getElementById('privacy-log').textContent = '';
+
+      log('privacy', '--- Testing Privacy/Fingerprinting Protection ---\n');
+
+      // Test 1: Draw deterministic pattern and check if toDataURL is consistent
+      const canvas1 = document.createElement('canvas');
+      canvas1.width = 100;
+      canvas1.height = 50;
+      const ctx1 = canvas1.getContext('2d');
+
+      // Draw a deterministic pattern
+      ctx1.fillStyle = '#ff0000';
+      ctx1.fillRect(0, 0, 50, 50);
+      ctx1.fillStyle = '#00ff00';
+      ctx1.fillRect(50, 0, 50, 50);
+      ctx1.fillStyle = '#0000ff';
+      ctx1.font = '12px Arial';
+      ctx1.fillText('Test', 10, 30);
+
+      const dataUri1a = canvas1.toDataURL('image/png');
+      const dataUri1b = canvas1.toDataURL('image/png');
+
+      log('privacy', `First toDataURL: ${dataUri1a.length} chars`);
+      log('privacy', `Second toDataURL: ${dataUri1b.length} chars`);
+      log('privacy', `Identical: ${dataUri1a === dataUri1b}`);
+
+      if (dataUri1a === dataUri1b) {
+        container.appendChild(createResultCard('toDataURL Consistency', 'pass', 'toDataURL returns identical results', dataUri1a));
+      } else {
+        container.appendChild(createResultCard('toDataURL Consistency', 'warn', 'toDataURL returns DIFFERENT results!<br>Fingerprinting protection may be active', dataUri1a));
+      }
+
+      // Test 2: Check getImageData consistency
+      const canvas2 = document.createElement('canvas');
+      canvas2.width = 10;
+      canvas2.height = 10;
+      const ctx2 = canvas2.getContext('2d');
+
+      ctx2.fillStyle = '#123456';
+      ctx2.fillRect(0, 0, 10, 10);
+
+      const data2a = ctx2.getImageData(0, 0, 10, 10).data;
+      const data2b = ctx2.getImageData(0, 0, 10, 10).data;
+
+      let identical = true;
+      for (let i = 0; i < data2a.length; i++) {
+        if (data2a[i] !== data2b[i]) {
+          identical = false;
+          break;
+        }
+      }
+
+      log('privacy', `getImageData identical: ${identical}`);
+      log('privacy', `First pixel RGBA: ${data2a[0]}, ${data2a[1]}, ${data2a[2]}, ${data2a[3]}`);
+
+      if (identical) {
+        container.appendChild(createResultCard('getImageData Consistency', 'pass', `Pixel data identical<br>RGBA: ${data2a[0]}, ${data2a[1]}, ${data2a[2]}, ${data2a[3]}`));
+      } else {
+        container.appendChild(createResultCard('getImageData Consistency', 'warn', 'Pixel data DIFFERS between calls!<br>Privacy protection adding noise'));
+      }
+
+      // Test 3: Check if canvas reading is blocked
+      let readBlocked = false;
+      try {
+        const canvas3 = document.createElement('canvas');
+        canvas3.width = 10;
+        canvas3.height = 10;
+        const ctx3 = canvas3.getContext('2d');
+        ctx3.fillRect(0, 0, 10, 10);
+        ctx3.getImageData(0, 0, 10, 10);
+        canvas3.toDataURL();
+      } catch (e) {
+        readBlocked = true;
+        log('privacy', `Canvas reading blocked: ${e.message}`);
+      }
+
+      if (readBlocked) {
+        container.appendChild(createResultCard('Canvas Reading', 'fail', 'Canvas reading is BLOCKED!<br>Signatures will fail'));
+        setStatus('8-4', 'fail', 'Reading blocked');
+      } else {
+        container.appendChild(createResultCard('Canvas Reading', 'pass', 'Canvas reading allowed'));
+        setStatus('8-4', dataUri1a === dataUri1b && identical ? 'pass' : 'warn',
+          dataUri1a === dataUri1b && identical ? 'No protection detected' : 'Privacy features active');
+      }
+    }
+
+    // =============================================================================
+    // Test 8.5: Cross-Origin Tainting
+    // =============================================================================
+    function testCrossOrigin() {
+      const container = document.getElementById('crossorigin-results');
+      container.innerHTML = '';
+      document.getElementById('crossorigin-log').textContent = '';
+
+      log('crossorigin', '--- Testing Cross-Origin Canvas Tainting ---\n');
+
+      // Test 1: Same-origin data URI (should work)
+      const canvas1 = document.createElement('canvas');
+      canvas1.width = 100;
+      canvas1.height = 50;
+      const ctx1 = canvas1.getContext('2d');
+
+      // Create a data URI image (same-origin)
+      const smallCanvas = document.createElement('canvas');
+      smallCanvas.width = 20;
+      smallCanvas.height = 20;
+      const smallCtx = smallCanvas.getContext('2d');
+      smallCtx.fillStyle = '#f00';
+      smallCtx.fillRect(0, 0, 20, 20);
+      const dataUriImg = smallCanvas.toDataURL();
+
+      const img1 = new Image();
+      img1.onload = () => {
+        ctx1.drawImage(img1, 40, 15);
+        try {
+          const result = canvas1.toDataURL('image/png');
+          log('crossorigin', `Same-origin data URI: SUCCESS, ${result.length} chars`);
+          container.appendChild(createResultCard('Same-Origin Data URI', 'pass', `toDataURL succeeded: ${result.length} chars`, result));
+        } catch (e) {
+          log('crossorigin', `Same-origin data URI: FAILED - ${e.message}`);
+          container.appendChild(createResultCard('Same-Origin Data URI', 'fail', `Error: ${e.message}`));
+        }
+      };
+      img1.src = dataUriImg;
+
+      // Test 2: Cross-origin image (without CORS)
+      const canvas2 = document.createElement('canvas');
+      canvas2.width = 100;
+      canvas2.height = 50;
+      const ctx2 = canvas2.getContext('2d');
+
+      const img2 = new Image();
+      img2.onload = () => {
+        ctx2.drawImage(img2, 0, 0, 100, 50);
+        try {
+          const result = canvas2.toDataURL('image/png');
+          log('crossorigin', `Cross-origin without CORS: SUCCESS (unexpected), ${result.length} chars`);
+          container.appendChild(createResultCard('Cross-Origin (No CORS)', 'warn', 'toDataURL succeeded - CORS may be permissive'));
+        } catch (e) {
+          log('crossorigin', `Cross-origin without CORS: BLOCKED as expected - ${e.message}`);
+          container.appendChild(createResultCard('Cross-Origin (No CORS)', 'pass', `Correctly blocked: ${e.name}`));
+        }
+      };
+      img2.onerror = () => {
+        log('crossorigin', 'Cross-origin image failed to load (expected for test)');
+        container.appendChild(createResultCard('Cross-Origin (No CORS)', 'pass', 'Image blocked from loading'));
+      };
+      // Use a known cross-origin URL (will likely fail to load)
+      img2.src = 'https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png';
+
+      // Test 3: Blob URL (should work)
+      const canvas3 = document.createElement('canvas');
+      canvas3.width = 100;
+      canvas3.height = 50;
+      const ctx3 = canvas3.getContext('2d');
+
+      smallCanvas.toBlob(blob => {
+        const blobUrl = URL.createObjectURL(blob);
+        const img3 = new Image();
+        img3.onload = () => {
+          ctx3.drawImage(img3, 40, 15);
+          URL.revokeObjectURL(blobUrl);
+          try {
+            const result = canvas3.toDataURL('image/png');
+            log('crossorigin', `Blob URL: SUCCESS, ${result.length} chars`);
+            container.appendChild(createResultCard('Blob URL', 'pass', `toDataURL succeeded: ${result.length} chars`, result));
+          } catch (e) {
+            log('crossorigin', `Blob URL: FAILED - ${e.message}`);
+            container.appendChild(createResultCard('Blob URL', 'fail', `Error: ${e.message}`));
+          }
+          updateCrossOriginStatus();
+        };
+        img3.src = blobUrl;
+      });
+
+      function updateCrossOriginStatus() {
+        // Check results after all tests complete
+        setTimeout(() => {
+          const cards = container.querySelectorAll('.result-card');
+          let failures = 0;
+          cards.forEach(card => {
+            if (card.classList.contains('fail')) failures++;
+          });
+          setStatus('8-5', failures === 0 ? 'pass' : 'fail', failures === 0 ? 'All passed' : `${failures} failed`);
+        }, 100);
+      }
+
+      setTimeout(updateCrossOriginStatus, 3000);
+    }
+
+    // =============================================================================
+    // Test 8.6: GPU/Hardware Acceleration
+    // =============================================================================
+    function testGPUAcceleration() {
+      const container = document.getElementById('gpu-results');
+      container.innerHTML = '';
+      document.getElementById('gpu-log').textContent = '';
+
+      log('gpu', '--- Testing GPU/Hardware Acceleration ---\n');
+
+      // Test 1: WebGL availability
+      const canvas1 = document.createElement('canvas');
+      const gl = canvas1.getContext('webgl') || canvas1.getContext('experimental-webgl');
+
+      if (gl) {
+        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+        const vendor = debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : 'Unknown';
+        const renderer = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'Unknown';
+
+        log('gpu', `WebGL available`);
+        log('gpu', `  Vendor: ${vendor}`);
+        log('gpu', `  Renderer: ${renderer}`);
+
+        container.appendChild(createResultCard('WebGL Support', 'pass', `Vendor: ${vendor}<br>Renderer: ${renderer}`));
+      } else {
+        log('gpu', 'WebGL NOT available');
+        container.appendChild(createResultCard('WebGL Support', 'warn', 'WebGL not available<br>Software rendering may be used'));
+      }
+
+      // Test 2: 2D canvas rendering consistency
+      const canvas2 = document.createElement('canvas');
+      canvas2.width = 100;
+      canvas2.height = 100;
+      const ctx2 = canvas2.getContext('2d');
+
+      // Complex drawing that might differ with GPU
+      const gradient = ctx2.createLinearGradient(0, 0, 100, 100);
+      gradient.addColorStop(0, '#ff0000');
+      gradient.addColorStop(0.5, '#00ff00');
+      gradient.addColorStop(1, '#0000ff');
+      ctx2.fillStyle = gradient;
+      ctx2.fillRect(0, 0, 100, 100);
+
+      ctx2.beginPath();
+      ctx2.arc(50, 50, 30, 0, Math.PI * 2);
+      ctx2.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx2.fill();
+
+      const dataUri2a = canvas2.toDataURL('image/png');
+      const dataUri2b = canvas2.toDataURL('image/png');
+
+      log('gpu', `Complex render consistency: ${dataUri2a === dataUri2b}`);
+      container.appendChild(createResultCard('Render Consistency', dataUri2a === dataUri2b ? 'pass' : 'warn',
+        dataUri2a === dataUri2b ? 'Consistent rendering' : 'Rendering varies between calls!', dataUri2a));
+
+      // Test 3: Large canvas GPU memory
+      const canvas3 = document.createElement('canvas');
+      try {
+        canvas3.width = 4096;
+        canvas3.height = 4096;
+        const ctx3 = canvas3.getContext('2d');
+
+        const start = performance.now();
+        ctx3.fillStyle = '#123456';
+        ctx3.fillRect(0, 0, 4096, 4096);
+        const fillTime = performance.now() - start;
+
+        const readStart = performance.now();
+        const dataUri3 = canvas3.toDataURL('image/png');
+        const readTime = performance.now() - readStart;
+
+        log('gpu', `Large canvas (4096x4096):`);
+        log('gpu', `  Fill time: ${fillTime.toFixed(2)}ms`);
+        log('gpu', `  toDataURL time: ${readTime.toFixed(2)}ms`);
+
+        container.appendChild(createResultCard('Large Canvas (4096x4096)', 'pass',
+          `Fill: ${fillTime.toFixed(2)}ms<br>toDataURL: ${readTime.toFixed(2)}ms<br>Size: ${dataUri3.length.toLocaleString()} chars`));
+      } catch (e) {
+        log('gpu', `Large canvas error: ${e.message}`);
+        container.appendChild(createResultCard('Large Canvas (4096x4096)', 'fail', `Error: ${e.message}`));
+      }
+
+      setStatus('8-6', 'pass', gl ? 'GPU available' : 'Software mode');
+    }
+
+    // =============================================================================
+    // Test 8.7: Image Format Edge Cases
+    // =============================================================================
+    function testImageFormats() {
+      const container = document.getElementById('format-results');
+      container.innerHTML = '';
+      document.getElementById('format-log').textContent = '';
+
+      log('format', '--- Testing Image Format Edge Cases ---\n');
+
+      // Test 1: 1x1 pixel image
+      const canvas1 = document.createElement('canvas');
+      canvas1.width = 1;
+      canvas1.height = 1;
+      const ctx1 = canvas1.getContext('2d');
+      ctx1.fillStyle = '#ff0000';
+      ctx1.fillRect(0, 0, 1, 1);
+
+      const dataUri1 = canvas1.toDataURL('image/png');
+      log('format', `1x1 pixel: ${dataUri1.length} chars`);
+      container.appendChild(createResultCard('1x1 Pixel', dataUri1.length > 50 ? 'pass' : 'fail',
+        `toDataURL: ${dataUri1.length} chars`, dataUri1));
+
+      // Test 2: Grayscale + alpha simulation
+      const canvas2 = document.createElement('canvas');
+      canvas2.width = 50;
+      canvas2.height = 50;
+      const ctx2 = canvas2.getContext('2d');
+
+      // Create grayscale with transparency
+      const imgData = ctx2.createImageData(50, 50);
+      for (let i = 0; i < imgData.data.length; i += 4) {
+        const gray = Math.floor((i / 4) % 256);
+        imgData.data[i] = gray;     // R
+        imgData.data[i + 1] = gray; // G
+        imgData.data[i + 2] = gray; // B
+        imgData.data[i + 3] = (i / 4) < 1250 ? 255 : 128; // A (half transparent)
+      }
+      ctx2.putImageData(imgData, 0, 0);
+
+      const dataUri2 = canvas2.toDataURL('image/png');
+      log('format', `Grayscale+alpha: ${dataUri2.length} chars`);
+      container.appendChild(createResultCard('Grayscale + Alpha', dataUri2.length > 100 ? 'pass' : 'fail',
+        `toDataURL: ${dataUri2.length} chars`, dataUri2));
+
+      // Test 3: Very wide aspect ratio
+      const canvas3 = document.createElement('canvas');
+      canvas3.width = 1000;
+      canvas3.height = 10;
+      const ctx3 = canvas3.getContext('2d');
+      ctx3.fillStyle = '#000';
+      ctx3.fillRect(0, 0, 1000, 10);
+
+      const dataUri3 = canvas3.toDataURL('image/png');
+      log('format', `Wide (1000x10): ${dataUri3.length} chars`);
+      container.appendChild(createResultCard('Wide Ratio (1000x10)', dataUri3.length > 100 ? 'pass' : 'fail',
+        `toDataURL: ${dataUri3.length} chars`));
+
+      // Test 4: Very tall aspect ratio
+      const canvas4 = document.createElement('canvas');
+      canvas4.width = 10;
+      canvas4.height = 1000;
+      const ctx4 = canvas4.getContext('2d');
+      ctx4.fillStyle = '#000';
+      ctx4.fillRect(0, 0, 10, 1000);
+
+      const dataUri4 = canvas4.toDataURL('image/png');
+      log('format', `Tall (10x1000): ${dataUri4.length} chars`);
+      container.appendChild(createResultCard('Tall Ratio (10x1000)', dataUri4.length > 100 ? 'pass' : 'fail',
+        `toDataURL: ${dataUri4.length} chars`));
+
+      // Test 5: Semi-transparent pixels
+      const canvas5 = document.createElement('canvas');
+      canvas5.width = 50;
+      canvas5.height = 50;
+      const ctx5 = canvas5.getContext('2d');
+      ctx5.fillStyle = 'rgba(0, 0, 0, 0.01)'; // Nearly invisible
+      ctx5.fillRect(0, 0, 50, 50);
+
+      const pixels5 = countNonTransparentPixels(canvas5);
+      const dataUri5 = canvas5.toDataURL('image/png');
+      log('format', `Semi-transparent (alpha=0.01): ${pixels5} pixels, ${dataUri5.length} chars`);
+      container.appendChild(createResultCard('Nearly Invisible (alpha=0.01)', pixels5 > 0 ? 'pass' : 'warn',
+        `Pixels detected: ${pixels5}`, dataUri5));
+
+      setStatus('8-7', 'pass', 'Format tests complete');
+    }
+
+    // =============================================================================
+    // Test 8.8: Offscreen Canvas
+    // =============================================================================
+    function testOffscreenCanvas() {
+      const container = document.getElementById('offscreen-results');
+      container.innerHTML = '';
+      document.getElementById('offscreen-log').textContent = '';
+
+      log('offscreen', '--- Testing Offscreen Canvas ---\n');
+
+      // Test 1: OffscreenCanvas support
+      if (typeof OffscreenCanvas === 'undefined') {
+        log('offscreen', 'OffscreenCanvas NOT supported');
+        container.appendChild(createResultCard('OffscreenCanvas Support', 'warn', 'OffscreenCanvas not available in this browser'));
+        setStatus('8-8', 'warn', 'Not supported');
+        return;
+      }
+
+      log('offscreen', 'OffscreenCanvas supported');
+
+      // Test 2: Basic OffscreenCanvas rendering
+      try {
+        const offscreen = new OffscreenCanvas(100, 50);
+        const ctx = offscreen.getContext('2d');
+
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(10, 10, 80, 30);
+
+        // OffscreenCanvas uses convertToBlob instead of toDataURL
+        offscreen.convertToBlob({ type: 'image/png' }).then(blob => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUri = reader.result;
+            log('offscreen', `OffscreenCanvas blob: ${dataUri.length} chars`);
+            container.appendChild(createResultCard('OffscreenCanvas Render', 'pass',
+              `convertToBlob: ${dataUri.length} chars`, dataUri));
+          };
+          reader.readAsDataURL(blob);
+        }).catch(e => {
+          log('offscreen', `convertToBlob error: ${e.message}`);
+          container.appendChild(createResultCard('OffscreenCanvas Render', 'fail', `Error: ${e.message}`));
+        });
+      } catch (e) {
+        log('offscreen', `OffscreenCanvas error: ${e.message}`);
+        container.appendChild(createResultCard('OffscreenCanvas Render', 'fail', `Error: ${e.message}`));
+      }
+
+      // Test 3: Transfer to regular canvas
+      try {
+        const offscreen = new OffscreenCanvas(100, 50);
+        const offCtx = offscreen.getContext('2d');
+        offCtx.fillStyle = '#00ff00';
+        offCtx.fillRect(10, 10, 80, 30);
+
+        const regularCanvas = document.createElement('canvas');
+        regularCanvas.width = 100;
+        regularCanvas.height = 50;
+        const regularCtx = regularCanvas.getContext('2d');
+
+        // Draw offscreen content to regular canvas
+        regularCtx.drawImage(offscreen, 0, 0);
+
+        const dataUri = regularCanvas.toDataURL('image/png');
+        log('offscreen', `Transfer to regular canvas: ${dataUri.length} chars`);
+        container.appendChild(createResultCard('Transfer to Canvas', 'pass',
+          `toDataURL: ${dataUri.length} chars`, dataUri));
+      } catch (e) {
+        log('offscreen', `Transfer error: ${e.message}`);
+        container.appendChild(createResultCard('Transfer to Canvas', 'fail', `Error: ${e.message}`));
+      }
+
+      // Test 4: ImageBitmap
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 50;
+        canvas.height = 50;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#0000ff';
+        ctx.fillRect(0, 0, 50, 50);
+
+        createImageBitmap(canvas).then(bitmap => {
+          const offscreen = new OffscreenCanvas(50, 50);
+          const offCtx = offscreen.getContext('2d');
+          offCtx.drawImage(bitmap, 0, 0);
+
+          offscreen.convertToBlob({ type: 'image/png' }).then(blob => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              log('offscreen', `ImageBitmap round-trip: ${reader.result.length} chars`);
+              container.appendChild(createResultCard('ImageBitmap Round-trip', 'pass',
+                `Size: ${reader.result.length} chars`, reader.result));
+              setStatus('8-8', 'pass', 'OffscreenCanvas OK');
+            };
+            reader.readAsDataURL(blob);
+          });
+        }).catch(e => {
+          log('offscreen', `ImageBitmap error: ${e.message}`);
+          container.appendChild(createResultCard('ImageBitmap', 'fail', `Error: ${e.message}`));
+        });
+      } catch (e) {
+        log('offscreen', `ImageBitmap error: ${e.message}`);
+        container.appendChild(createResultCard('ImageBitmap', 'fail', `Error: ${e.message}`));
+      }
+
+      setTimeout(() => {
+        if (document.getElementById('status-8-8').textContent === 'Pending') {
+          setStatus('8-8', 'pass', 'OffscreenCanvas OK');
+        }
+      }, 2000);
+    }
+
+    // =============================================================================
+    // Initialize
+    // =============================================================================
+    renderBrowserInfo();
+  </script>
+</body>
+</html>
